@@ -40,7 +40,7 @@ export function ChatInputSuggestions({ isHidden = false }: { isHidden?: boolean 
 	const story = useStorySuggestion();
 	const feedback = useConversationFeedback();
 
-	const content = renderSuggestion({ isReadonly, story, feedback });
+	const content = renderSuggestion({ isReadonly, mcpAuth, story, feedback });
 	const isCollapsed = isHidden || !content;
 	const { ref, height } = useMeasuredHeight();
 
@@ -81,10 +81,12 @@ function useMeasuredHeight() {
 
 function renderSuggestion({
 	isReadonly,
+	mcpAuth,
 	story,
 	feedback,
 }: {
 	isReadonly: boolean | undefined;
+	mcpAuth: McpAuthSuggestion;
 	story: StorySuggestion;
 	feedback: ConversationFeedback;
 }) {
