@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { MessageSquare, X, ThumbsDown, ThumbsUp, Check, Plug } from 'lucide-react';
 import { NegativeFeedbackDialog } from './chat-messages/assistant-message-actions';
@@ -14,6 +14,7 @@ import { createLocalStorage } from '@/lib/local-storage';
 import { lastUserMessagePayload } from '@/lib/mcp-auth-retry';
 import { openMcpConnectPopup } from '@/lib/mcp-oauth';
 import { findStoryIds } from '@/lib/story.utils';
+import { cn } from '@/lib/utils';
 import { trpc } from '@/main';
 
 /** Milliseconds of inactivity before we ask the user how the conversation went. */
@@ -29,13 +30,64 @@ const storyProposalDisabledStorage = createLocalStorage<boolean>('nao-story-prop
  * A floating panel that sits above the chat input and surfaces a single
  * contextual prompt. Only one suggestion is shown at a time — the story
  * suggestion takes priority over the conversation feedback prompt.
+ *
+ * When `isHidden` is set (e.g. the user starts typing) the panel smoothly
+ * collapses and fades out instead of abruptly unmounting.
  */
-export function ChatInputSuggestions() {
+export function ChatInputSuggestions({ isHidden = false }: { isHidden?: boolean }) {
 	const { isReadonly } = useAgentContext();
 	const mcpAuth = useMcpAuthSuggestion();
 	const story = useStorySuggestion();
 	const feedback = useConversationFeedback();
 
+	const content = renderSuggestion({ isReadonly, story, feedback });
+	const isCollapsed = isHidden || !content;
+	const { ref, height } = useMeasuredHeight();
+
+	return (
+		<div
+			className='overflow-hidden'
+			style={{
+				height: isCollapsed ? 0 : height,
+				opacity: isCollapsed ? 0 : 1,
+				transition: 'height 300ms ease-out, opacity 300ms ease-out',
+			}}
+			aria-hidden={isCollapsed}
+		>
+			<div ref={ref} className={cn('pb-2', isCollapsed && 'pointer-events-none')}>
+				{content}
+			</div>
+		</div>
+	);
+}
+
+/** Measures the suggestion content height so the panel can collapse to a real, transitionable pixel value. */
+function useMeasuredHeight() {
+	const ref = useRef<HTMLDivElement>(null);
+	const [height, setHeight] = useState(0);
+
+	useLayoutEffect(() => {
+		const element = ref.current;
+		if (!element) {
+			return;
+		}
+		const observer = new ResizeObserver(() => setHeight(element.offsetHeight));
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, []);
+
+	return { ref, height };
+}
+
+function renderSuggestion({
+	isReadonly,
+	story,
+	feedback,
+}: {
+	isReadonly: boolean | undefined;
+	story: StorySuggestion;
+	feedback: ConversationFeedback;
+}) {
 	if (isReadonly) {
 		return null;
 	}
@@ -371,7 +423,7 @@ function SuggestionCard({
 	return (
 		<div
 			data-selection-ignore
-			className='group mb-2 flex items-center gap-1 rounded-2xl border border-muted-foreground/25 bg-background p-2 animate-in fade-in slide-in-from-bottom-2 duration-200'
+			className='group flex items-center gap-1 rounded-2xl border border-muted-foreground/25 bg-background p-2'
 		>
 			{icon && <div className='flex size-9 shrink-0 items-center justify-center'>{icon}</div>}
 			<p className='min-w-0 flex-1 truncate text-sm font-medium text-foreground'>{message}</p>
