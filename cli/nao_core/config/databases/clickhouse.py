@@ -479,6 +479,9 @@ class ClickHouseDatabaseContext(DatabaseContext):
                 for col in system_columns
                 if isinstance(col.get("name"), str)
             }
+            descriptions = {
+                col["name"]: col.get("description") for col in system_columns if isinstance(col.get("name"), str)
+            }
             for col in cols:
                 name = col.get("name")
                 if not isinstance(name, str):
@@ -492,6 +495,8 @@ class ClickHouseDatabaseContext(DatabaseContext):
                         col["type"] = native_type
                 if meta := defaults.get(name):
                     col.update(meta)
+                if description := descriptions.get(name):
+                    col["description"] = description
             return self._filter_excluded_columns(cols)
         except Exception:
             return self._filter_excluded_columns(_columns_from_system(self._conn, self._schema, self._table_name))
