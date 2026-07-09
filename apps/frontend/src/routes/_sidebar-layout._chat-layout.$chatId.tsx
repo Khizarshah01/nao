@@ -66,7 +66,7 @@ function ChatPage() {
 
 	useEffect(() => {
 		if (shouldRedirectToReplay) {
-			router.navigate({ to: '/settings/chats-replay', search: { chatId } });
+			router.navigate({ to: '/settings/chats-replay', search: { chatId }, replace: true });
 		}
 	}, [shouldRedirectToReplay, chatId, router]);
 
