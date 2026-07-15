@@ -141,11 +141,11 @@ TODO
 
 TODO: fill in the brand series colors from the company's design system / brand guidelines (add or remove rows as needed).
 
-| Hex       | Role                                    |
-| --------- | --------------------------------------- |
-| `#RRGGBB` | Primary — default single-series color   |
-| `#RRGGBB` | Secondary                               |
-| `#RRGGBB` | ... (extend to ~6 shades)               |
+| Hex       | Role                                  |
+| --------- | ------------------------------------- |
+| `#RRGGBB` | Primary — default single-series color |
+| `#RRGGBB` | Secondary                             |
+| `#RRGGBB` | ... (extend to ~6 shades)             |
 
 - **Single-series charts**: use the primary brand color.
 - **Multi-series charts**: assign colors across the palette above; beyond ~6 series, use additional tints/shades of the brand colors rather than introducing off-brand hues.
@@ -154,10 +154,10 @@ TODO: fill in the brand series colors from the company's design system / brand g
 
 When a chart encodes whether numbers are good or bad (deltas, variances, positive/negative KPIs), use fixed semantic colors — not the brand palette:
 
-| Hex       | Meaning                     |
-| --------- | --------------------------- |
-| `#RRGGBB` | positive / good numbers     |
-| `#RRGGBB` | negative / bad numbers      |
+| Hex       | Meaning                 |
+| --------- | ----------------------- |
+| `#RRGGBB` | positive / good numbers |
+| `#RRGGBB` | negative / bad numbers  |
 
 - Use tints of these two colors for gradients or multiple good/bad levels.
 - Use the brand (neutral) colors for purely categorical series that don't carry a good/bad meaning.
