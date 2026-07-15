@@ -21,4 +21,4 @@ apps/backend/projects/
 
 *.code-workspace
 
-.cursor/rules
+.cursor/
