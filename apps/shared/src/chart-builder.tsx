@@ -35,6 +35,14 @@ const DATA_LABEL_MARGIN_TOP = 24;
 const DATA_LABEL_HEADROOM_RATIO = 0.9;
 const MAX_LINE_AREA_DATA_LABELS = 12;
 
+/** Theme-aware background used to draw the thin gaps between pie/donut slices. */
+const DEFAULT_BACKGROUND = 'var(--background, #ffffff)';
+
+/** Beyond this many slices, pie/donut charts bucket the smallest into a single "Other" slice. */
+const MAX_PIE_SLICES = 10;
+
+const DONUT_INNER_RADIUS = '45%';
+
 export function labelize(key: unknown, dateFormat?: DateFormatSettings | null): string {
 	const str = String(key);
 	if (isIsoDateLike(str)) {
@@ -83,6 +91,7 @@ export interface BuildChartProps {
 	margin?: { top?: number; right?: number; bottom?: number; left?: number };
 	title?: string;
 	maxXAxisTicks?: number;
+	backgroundColor?: string;
 	showDataLabels?: boolean;
 }
 
@@ -98,7 +107,7 @@ export function buildChart(props: BuildChartProps) {
 	if (resolved.chartType === 'kpi_card') {
 		return buildKpiCard(resolved);
 	}
-	if (resolved.chartType === 'pie') {
+	if (displayChart.isPieChart(resolved.chartType)) {
 		return buildPieChart(resolved);
 	}
 	if (resolved.chartType === 'line' || resolved.chartType === 'area' || resolved.chartType === 'stacked_area') {
@@ -128,6 +137,7 @@ function buildResolved(props: BuildChartProps) {
 		...props,
 		colorFor,
 		labelFormatter,
+		backgroundColor: props.backgroundColor ?? DEFAULT_BACKGROUND,
 		xAxisInterval,
 		margin: buildChartMargin(props),
 		children: titleChild ? [titleChild, ...(props.children ?? [])] : props.children,
@@ -136,7 +146,7 @@ function buildResolved(props: BuildChartProps) {
 }
 
 type ResolvedProps = BuildChartProps &
-	Required<Pick<BuildChartProps, 'colorFor' | 'labelFormatter'>> & { xAxisInterval?: number };
+	Required<Pick<BuildChartProps, 'colorFor' | 'labelFormatter' | 'backgroundColor'>> & { xAxisInterval?: number };
 
 function buildChartMargin(props: BuildChartProps) {
 	const titleTop = props.title ? 30 : 0;
@@ -430,9 +440,11 @@ function buildRadarChart(props: ResolvedProps) {
 }
 
 function buildPieChart(props: ResolvedProps) {
-	const { data, xAxisKey, series, colorFor, labelFormatter, children, margin } = props;
+	const { data, chartType, xAxisKey, series, colorFor, children, margin, backgroundColor } = props;
 	const dataKey = series[0].data_key;
 
+	// Callers are expected to bucket the data (see `bucketPieData`) so the legend
+	// and slices share one set; the builder does not re-bucket here.
 	const uniqueValues = [...new Set(data.map((d) => String(d[xAxisKey])))];
 	const colorMap = new Map(uniqueValues.map((v, i) => [v, colorFor(v, i)]));
 
@@ -447,8 +459,11 @@ function buildPieChart(props: ResolvedProps) {
 				data={dataWithColors}
 				dataKey={dataKey}
 				nameKey={xAxisKey}
-				label={renderPieLabel(labelFormatter)}
+				innerRadius={chartType === 'donut' ? DONUT_INNER_RADIUS : 0}
+				label={false}
 				labelLine={false}
+				stroke={backgroundColor}
+				strokeWidth={1}
 				isAnimationActive={false}
 			/>
 			{children}
@@ -456,26 +471,42 @@ function buildPieChart(props: ResolvedProps) {
 	);
 }
 
-function renderPieLabel(labelFormatter: (v: string) => string) {
-	return ({
-		x,
-		y,
-		name,
-		value,
-		fill,
-		textAnchor,
-	}: {
-		x: number;
-		y: number;
-		name: string;
-		value: number;
-		fill: string;
-		textAnchor: 'start' | 'middle' | 'end';
-	}) => (
-		<text x={x} y={y} fill={fill} textAnchor={textAnchor} dominantBaseline='central' fontSize={12}>
-			{`${labelFormatter(String(name))}: ${formatCompactNumber(value)}`}
-		</text>
-	);
+const OTHER_CATEGORY = 'Other';
+
+/**
+ * Buckets pie/donut rows so at most `maxSlices` categories are shown: keeps the
+ * largest slices by value and sums the remainder into a single "Other" slice.
+ * Returns the rows unchanged when they already fit. If a real "Other" category
+ * is kept, the aggregate is merged into it so there is never a duplicate slice.
+ */
+export function bucketPieData(
+	rows: Record<string, unknown>[],
+	categoryKey: string,
+	valueKey: string,
+	maxSlices = MAX_PIE_SLICES,
+): Record<string, unknown>[] {
+	if (rows.length <= maxSlices) {
+		return rows;
+	}
+
+	const sorted = [...rows].sort((a, b) => toNumericValue(b[valueKey]) - toNumericValue(a[valueKey]));
+	const top = sorted.slice(0, maxSlices);
+	const rest = sorted.slice(maxSlices);
+	const otherValue = rest.reduce((sum, row) => sum + toNumericValue(row[valueKey]), 0);
+
+	const existingOtherIndex = top.findIndex((row) => String(row[categoryKey]) === OTHER_CATEGORY);
+	if (existingOtherIndex !== -1) {
+		const merged = [...top];
+		const existing = merged[existingOtherIndex];
+		merged[existingOtherIndex] = { ...existing, [valueKey]: toNumericValue(existing[valueKey]) + otherValue };
+		return merged;
+	}
+
+	return [...top, { [categoryKey]: OTHER_CATEGORY, [valueKey]: otherValue }];
+}
+
+function toNumericValue(value: unknown): number {
+	return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function renderChartTitle(title: string) {
