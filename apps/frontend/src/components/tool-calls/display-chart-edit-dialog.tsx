@@ -57,9 +57,9 @@ function percentChartType(type: displayChart.ChartType): displayChart.ChartType 
 interface ChartConfigEditDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	config: displayChart.Input;
+	config: displayChart.ChartInput;
 	availableColumns: string[];
-	onSave: (next: displayChart.Input) => Promise<void>;
+	onSave: (next: displayChart.ChartInput) => Promise<void>;
 	isSaving?: boolean;
 	description?: string;
 }
@@ -74,7 +74,7 @@ export function ChartConfigEditDialog({
 	isSaving = false,
 	description = 'Tweak the chart parameters.',
 }: ChartConfigEditDialogProps) {
-	const [draft, setDraft] = useState<displayChart.Input>(config);
+	const [draft, setDraft] = useState<displayChart.ChartInput>(config);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -93,7 +93,7 @@ export function ChartConfigEditDialog({
 
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
-		const parsed = displayChart.InputSchema.safeParse(draft);
+		const parsed = displayChart.ChartInputSchema.safeParse(draft);
 		if (!parsed.success) {
 			setError(parsed.error.issues[0]?.message ?? 'Invalid chart configuration.');
 			return;
@@ -349,7 +349,7 @@ interface DisplayChartEditDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	toolCallId: string;
-	config: displayChart.Input;
+	config: displayChart.ChartInput;
 	availableColumns: string[];
 }
 
@@ -372,7 +372,7 @@ export function DisplayChartEditDialog({
 		}),
 	);
 
-	const handleSave = async (next: displayChart.Input) => {
+	const handleSave = async (next: displayChart.ChartInput) => {
 		const previousMessages = messages;
 		setMessages(applyChartConfigToMessages(previousMessages, toolCallId, next));
 		try {
@@ -436,7 +436,7 @@ function normalizeHexColor(color?: string): string {
 function applyChartConfigToMessages(
 	messages: UIMessage[],
 	toolCallId: string,
-	config: displayChart.Input,
+	config: displayChart.ChartInput,
 ): UIMessage[] {
 	return messages.map((message) => {
 		let changed = false;
