@@ -214,7 +214,7 @@ export const DisplayChartToolCall = ({
 
 	return (
 		<div
-			className={`flex flex-col items-center my-4 gap-2 ${chartConfig.chart_type !== 'kpi_card' && !normalSize ? 'aspect-3/2' : ''}`}
+			className={`flex flex-col items-stretch w-full my-4 gap-4 ${chartConfig.chart_type !== 'kpi_card' && !normalSize ? 'aspect-3/2' : ''}`}
 		>
 			<div className='flex w-full items-center justify-between gap-2'>
 				{chartConfig.chart_type != 'kpi_card' ? (
@@ -460,6 +460,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 					),
 				],
 				title,
+				renderTitle: false,
 			}),
 		[
 			pieData,
@@ -483,7 +484,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 	);
 
 	return (
-		<div className='flex flex-col items-center gap-2 w-full'>
+		<div className='flex flex-col items-stretch gap-2 w-full'>
 			{chartType === 'kpi_card' ? (
 				chartElement
 			) : (

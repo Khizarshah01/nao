@@ -55,6 +55,13 @@ const STACK_SEPARATOR_WIDTH = 1;
  */
 const DEFAULT_BACKGROUND_COLOR = 'var(--background, #ffffff)';
 
+/**
+ * Reserved width for the Y axis band. Smaller than the Recharts default (60)
+ * so the tick labels sit close to the chart's left edge, aligned under the
+ * title. Y values are abbreviated by `formatYAxisTick` (e.g. `1.2K`).
+ */
+const Y_AXIS_WIDTH = 36;
+
 export function labelize(key: unknown, dateFormat?: DateFormatSettings | null): string {
 	const str = String(key);
 	if (isIsoDateLike(str)) {
@@ -77,8 +84,34 @@ export function formatCompactNumber(value: number): string {
 	return value.toLocaleString();
 }
 
+/**
+ * Formats a Y axis tick so it stays short enough for the narrow axis band
+ * ({@link Y_AXIS_WIDTH}px) without losing meaningful precision. Abbreviates by
+ * absolute value while preserving the sign (`1020` → `1.02K`, `-1_500_000` →
+ * `-1.5M`) with a 2-decimal mantissa so near-boundary ticks stay distinct.
+ * Sub-integer magnitudes keep two significant digits (`0.004` → `0.004`) rather
+ * than rounding to `0`.
+ */
 export function formatYAxisTick(value: number): string {
-	return formatCompactNumber(value);
+	const abs = Math.abs(value);
+	const sign = value < 0 ? '-' : '';
+	if (abs >= 1_000_000_000) {
+		return `${sign}${abbreviate(abs, 1_000_000_000)}B`;
+	}
+	if (abs >= 1_000_000) {
+		return `${sign}${abbreviate(abs, 1_000_000)}M`;
+	}
+	if (abs >= 1_000) {
+		return `${sign}${abbreviate(abs, 1_000)}K`;
+	}
+	if (Number.isInteger(value)) {
+		return String(value);
+	}
+	return String(Number(abs < 1 ? value.toPrecision(2) : value.toFixed(2)));
+}
+
+function abbreviate(abs: number, unit: number): string {
+	return String(Number((abs / unit).toFixed(2)));
 }
 
 /** Formats a 0–1 stack ratio (from Recharts `stackOffset="expand"`) as a whole-number percentage. */
@@ -125,6 +158,7 @@ export interface BuildChartProps {
 	children?: React.ReactNode[];
 	margin?: { top?: number; right?: number; bottom?: number; left?: number };
 	title?: string;
+	renderTitle?: boolean;
 	maxXAxisTicks?: number;
 	yAxisMin?: number;
 	yAxisMax?: number;
@@ -169,7 +203,9 @@ function buildResolved(props: BuildChartProps) {
 	const colorFor = props.colorFor ?? defaultColorFor;
 	const labelFormatter = props.labelFormatter ?? ((v: string) => labelize(v));
 
-	const titleChild = props.title ? renderChartTitle(props.title) : null;
+	const title = props.renderTitle !== false ? props.title : undefined;
+	const titleChild = title ? renderChartTitle(title) : null;
+	const showTitle = titleChild != null;
 
 	const xAxisInterval =
 		props.maxXAxisTicks && props.data.length > props.maxXAxisTicks
@@ -190,7 +226,7 @@ function buildResolved(props: BuildChartProps) {
 		labelFormatter,
 		backgroundColor: props.backgroundColor ?? DEFAULT_BACKGROUND,
 		xAxisInterval,
-		margin: buildChartMargin(props),
+		margin: buildChartMargin(props, showTitle),
 		children: titleChild ? [titleChild, ...(props.children ?? [])] : props.children,
 	};
 	return resolved;
@@ -233,8 +269,8 @@ export function clampNegativeSeriesValues(
 type ResolvedProps = BuildChartProps &
 	Required<Pick<BuildChartProps, 'colorFor' | 'labelFormatter' | 'backgroundColor'>> & { xAxisInterval?: number };
 
-function buildChartMargin(props: BuildChartProps) {
-	const titleTop = props.title ? 30 : 0;
+function buildChartMargin(props: BuildChartProps, showTitle: boolean) {
+	const titleTop = showTitle ? 30 : 0;
 	const labelsTop = shouldReserveDataLabelHeadroom(props) ? DATA_LABEL_MARGIN_TOP : 0;
 	if (titleTop === 0 && labelsTop === 0) {
 		return props.margin;
@@ -350,6 +386,7 @@ function KpiCard({ value, displayName }: { value: unknown; displayName: string }
 function renderValueYAxis(isPercent = false) {
 	return (
 		<YAxis
+			width={Y_AXIS_WIDTH}
 			tick={AXIS_TICK}
 			tickLine={false}
 			axisLine={false}
