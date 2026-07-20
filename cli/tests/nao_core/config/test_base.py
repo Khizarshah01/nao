@@ -167,21 +167,48 @@ def test_templates_key_works_without_deprecation_warning():
     assert len(deprecation_warnings) == 0
 
 
-def test_how_to_use_template_variant():
-    """how_to_use can be added to the templates list."""
+def test_query_history_template_variant():
+    """query_history can be added to the templates list."""
     from nao_core.config.databases.base import DatabaseTemplate
 
-    db = DuckDBConfig.model_validate(
-        {
-            "type": "duckdb",
-            "name": "test-db",
-            "path": ":memory:",
-            "templates": ["columns", "how_to_use"],
-            "query_history_days": 14,
-        }
-    )
-    assert DatabaseTemplate.HOW_TO_USE in db.templates
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        db = DuckDBConfig.model_validate(
+            {
+                "type": "duckdb",
+                "name": "test-db",
+                "path": ":memory:",
+                "templates": ["columns", "query_history"],
+                "query_history_days": 14,
+            }
+        )
+
+    assert DatabaseTemplate.QUERY_HISTORY in db.templates
     assert db.query_history_days == 14
+    assert not [warning for warning in caught if issubclass(warning.category, FutureWarning)]
+
+
+def test_legacy_description_removed_and_how_to_use_maps_to_query_history():
+    """Legacy templates are migrated with warnings."""
+    from nao_core.config.databases.base import DatabaseTemplate
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        db = DuckDBConfig.model_validate(
+            {
+                "type": "duckdb",
+                "name": "test-db",
+                "path": ":memory:",
+                "templates": ["columns", "description", "how_to_use"],
+            }
+        )
+
+    assert db.templates == [DatabaseTemplate.COLUMNS, DatabaseTemplate.QUERY_HISTORY]
+    deprecation_warnings = [warning for warning in caught if issubclass(warning.category, FutureWarning)]
+    assert len(deprecation_warnings) == 2
+    warning_messages = [str(warning.message) for warning in deprecation_warnings]
+    assert any("description" in message and "columns.md" in message for message in warning_messages)
+    assert any("how_to_use" in message and "query_history" in message for message in warning_messages)
 
 
 def test_default_templates_exclude_profiling():
@@ -358,7 +385,7 @@ def test_query_history_fields_loaded_from_yaml_dict():
             "type": "duckdb",
             "name": "test-db",
             "path": ":memory:",
-            "templates": ["columns", "how_to_use"],
+            "templates": ["columns", "query_history"],
             "query_history_days": 7,
             "query_history_sql": "SELECT q AS query_text FROM log WHERE ts > now() - interval '{days} days'",
             "query_history_exclude_patterns": [r"SYSTEM\$", r"CURRENT_SESSION"],
