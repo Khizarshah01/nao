@@ -140,7 +140,7 @@ class DatabaseConfig(BaseModel, ABC):
         if isinstance(data, dict) and "accessors" in data and "templates" not in data:
             warnings.warn(
                 "The 'accessors' config key is deprecated and will be removed in a future version. "
-                "Please rename it to 'templates' in your nao.yaml.",
+                "Please rename it to 'templates' in your nao_config.yaml.",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -158,7 +158,7 @@ class DatabaseConfig(BaseModel, ABC):
             if "how_to_use" in templates:
                 warnings.warn(
                     "The 'how_to_use' database template is deprecated and will be removed in a future version. "
-                    "Please rename it to 'query_history' in your nao.yaml.",
+                    "Please rename it to 'query_history' in your nao_config.yaml.",
                     FutureWarning,
                     stacklevel=2,
                 )
