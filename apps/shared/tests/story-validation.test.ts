@@ -147,6 +147,61 @@ describe('validateStoryCode', () => {
 		});
 	});
 
+	describe('tabs validation', () => {
+		it('accepts a well-formed tabbed story', () => {
+			const code = [
+				'<tab title="Overview">',
+				'# Overview',
+				'</tab>',
+				'<tab title="Details">',
+				'<table query_id="q1" title="Details" />',
+				'</tab>',
+			].join('\n');
+
+			expect(validateStoryCode(code)).toEqual([]);
+		});
+
+		it('accepts a tab title containing >', () => {
+			const code = ['<tab title="Revenue > 1000">', '# Revenue', '</tab>'].join('\n');
+			expect(validateStoryCode(code)).toEqual([]);
+		});
+
+		it('does not treat table blocks as tabs', () => {
+			expect(validateStoryCode('<table query_id="q1" title="Details" />')).toEqual([]);
+		});
+
+		it('flags content before the first tab', () => {
+			const errors = validateStoryCode('Intro\n<tab title="Overview">Content</tab>');
+			expect(errors.some((e) => /not allowed outside <tab> blocks/.test(e.message))).toBe(true);
+		});
+
+		it('flags a tab missing a title', () => {
+			const errors = validateStoryCode('<tab>Content</tab>');
+			expect(errors.some((e) => /missing a required `title`/.test(e.message))).toBe(true);
+		});
+
+		it('flags an unterminated tab', () => {
+			const errors = validateStoryCode('<tab title="Overview">Content');
+			expect(errors.some((e) => /missing a matching <\/tab>/.test(e.message))).toBe(true);
+		});
+
+		it('flags content between tabs', () => {
+			const code = [
+				'<tab title="Overview">Overview</tab>',
+				'Stray paragraph',
+				'<tab title="Details">Details</tab>',
+			].join('\n');
+			const errors = validateStoryCode(code);
+			expect(errors.some((e) => /not allowed outside <tab>/.test(e.message))).toBe(true);
+		});
+
+		it('flags content after the last tab', () => {
+			const code = '<tab title="Overview">Content</tab>\nAfter';
+			const errors = validateStoryCode(code);
+			expect(errors.some((e) => /not allowed outside <tab> blocks/.test(e.message))).toBe(true);
+		});
+	});
+
 	it('reports line and column for errors', () => {
 		const code = ['# intro', '', 'some text', '', '<chart query_id="q" />'].join('\n');
 		const errors = validateStoryCode(code);
