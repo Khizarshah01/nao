@@ -277,12 +277,10 @@ function StandaloneStoryContent({
 			chart: ParsedChartBlock,
 			{
 				queryData: data,
-				baselineQueryData,
 				hasActiveFilters,
 				isRefreshing,
 			}: {
 				queryData: QueryDataMap | null;
-				baselineQueryData: QueryDataMap | null;
 				hasActiveFilters: boolean;
 				isRefreshing: boolean;
 			},
@@ -290,7 +288,6 @@ function StandaloneStoryContent({
 			<StoryChartEmbed
 				chart={chart}
 				queryData={data}
-				baselineQueryData={baselineQueryData}
 				hasActiveFilters={hasActiveFilters}
 				isRefreshing={isRefreshing}
 			/>

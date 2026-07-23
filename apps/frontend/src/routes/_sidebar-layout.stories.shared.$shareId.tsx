@@ -315,12 +315,10 @@ function SharedStoryContent({
 			chart: ParsedChartBlock,
 			{
 				queryData: data,
-				baselineQueryData,
 				hasActiveFilters,
 				isRefreshing,
 			}: {
 				queryData: QueryDataMap | null;
-				baselineQueryData: QueryDataMap | null;
 				hasActiveFilters: boolean;
 				isRefreshing: boolean;
 			},
@@ -328,7 +326,6 @@ function SharedStoryContent({
 			<StoryChartEmbed
 				chart={chart}
 				queryData={isNoCacheMode && !hasActiveFilters ? undefined : data}
-				baselineQueryData={baselineQueryData}
 				liveQuery={isNoCacheMode && !hasActiveFilters ? noCacheQuery : undefined}
 				hasActiveFilters={hasActiveFilters}
 				isRefreshing={isRefreshing}

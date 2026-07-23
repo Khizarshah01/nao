@@ -66,21 +66,13 @@ export const StoryPreview = memo(function StoryPreview({
 				<LiveChartEmbed
 					chart={chart}
 					queryData={useLiveUnfiltered ? undefined : effectiveQueryData}
-					baselineQueryData={queryData}
 					liveQuery={useLiveUnfiltered ? noCacheQuery : undefined}
 					hasActiveFilters={storyFilters.hasActiveFilters}
 					isRefreshing={storyFilters.isFiltering}
 				/>
 			);
 		},
-		[
-			effectiveQueryData,
-			useLiveUnfiltered,
-			noCacheQuery,
-			storyFilters.hasActiveFilters,
-			storyFilters.isFiltering,
-			queryData,
-		],
+		[effectiveQueryData, useLiveUnfiltered, noCacheQuery, storyFilters.hasActiveFilters, storyFilters.isFiltering],
 	);
 
 	const renderTable = useCallback(

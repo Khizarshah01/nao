@@ -1,4 +1,3 @@
-import { resolveDataKey } from '@nao/shared';
 import { getToolName, isToolUIPart } from './ai';
 import { hashValue } from './hash';
 import type { UIMessage } from '@nao/backend/chat';
@@ -100,51 +99,6 @@ export const toKey = (value: string) => {
 export function resolvePieTooltipLabel(payload?: readonly { name?: unknown }[]): string {
 	const name = payload?.[0]?.name;
 	return name == null ? '' : String(name);
-}
-
-/**
- * Keeps the baseline x-axis categories when filtered SQL drops rows, zero-filling
- * series values for missing categories so bars/lines animate in place instead of
- * collapsing the axis.
- */
-export function alignChartDataToBaselineX(
-	baseline: Record<string, unknown>[],
-	filtered: Record<string, unknown>[],
-	xAxisKey: string,
-	seriesKeys: string[],
-): Record<string, unknown>[] {
-	if (baseline.length === 0) {
-		return filtered;
-	}
-
-	const baselineXKey = resolveDataKey(baseline, xAxisKey);
-	const filteredXKey = resolveDataKey(filtered, xAxisKey);
-	const resolvedSeriesKeys = seriesKeys.map((key) => resolveDataKey(baseline, key));
-
-	const filteredByX = new Map<string, Record<string, unknown>>();
-	for (const row of filtered) {
-		filteredByX.set(String(row[filteredXKey] ?? row[baselineXKey]), row);
-	}
-
-	return baseline.map((baseRow) => {
-		const xValue = String(baseRow[baselineXKey]);
-		const match = filteredByX.get(xValue);
-		if (!match) {
-			const emptyRow = { ...baseRow };
-			for (const key of resolvedSeriesKeys) {
-				emptyRow[key] = 0;
-			}
-			return emptyRow;
-		}
-
-		const next = { ...baseRow };
-		for (const key of resolvedSeriesKeys) {
-			const matchKey = resolveDataKey([match], key);
-			const value = match[matchKey] ?? match[key];
-			next[key] = typeof value === 'number' || value === null ? value : value === undefined ? 0 : value;
-		}
-		return next;
-	});
 }
 
 /** Counts the successfully rendered `display_chart` tool calls across a conversation. */

@@ -42,12 +42,10 @@ function StoryBody({ code, queryData }: { code: string; queryData: QueryDataMap 
 			chart: ParsedChartBlock,
 			{
 				queryData: data,
-				baselineQueryData,
 				hasActiveFilters,
 				isRefreshing,
 			}: {
 				queryData: QueryDataMap | null;
-				baselineQueryData: QueryDataMap | null;
 				hasActiveFilters: boolean;
 				isRefreshing: boolean;
 			},
@@ -55,7 +53,6 @@ function StoryBody({ code, queryData }: { code: string; queryData: QueryDataMap 
 			<StoryChartEmbed
 				chart={chart}
 				queryData={data}
-				baselineQueryData={baselineQueryData}
 				hasActiveFilters={hasActiveFilters}
 				isRefreshing={isRefreshing}
 			/>

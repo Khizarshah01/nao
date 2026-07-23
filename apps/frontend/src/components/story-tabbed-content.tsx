@@ -13,7 +13,6 @@ import { useStoryFilters } from '@/hooks/use-story-filters';
 
 export interface StoryEmbedRenderOptions {
 	queryData: QueryDataMap | null;
-	baselineQueryData: QueryDataMap | null;
 	hasActiveFilters: boolean;
 	isRefreshing: boolean;
 	key: number;
@@ -81,7 +80,6 @@ export function StoryTabbedContent({
 							renderChart={(chart, key) =>
 								renderChart(chart, {
 									queryData: storyFilters.queryData,
-									baselineQueryData: baselineQueryData ?? null,
 									hasActiveFilters: storyFilters.hasActiveFilters,
 									isRefreshing: storyFilters.isFiltering,
 									key,
@@ -90,7 +88,6 @@ export function StoryTabbedContent({
 							renderTable={(table, key) =>
 								renderTable(table, {
 									queryData: storyFilters.queryData,
-									baselineQueryData: baselineQueryData ?? null,
 									hasActiveFilters: storyFilters.hasActiveFilters,
 									isRefreshing: storyFilters.isFiltering,
 									key,

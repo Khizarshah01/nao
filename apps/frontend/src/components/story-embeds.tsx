@@ -1,14 +1,13 @@
 import { Loader2 } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { displayChart } from '@nao/shared/tools';
+import type { displayChart } from '@nao/shared/tools';
 import type { ParsedChartBlock, ParsedTableBlock } from '@nao/shared/story-segments';
 
 import { StoryChartEmbedShell } from '@/components/side-panel/story-chart-embed';
 import { StoryTableEditControls } from '@/components/side-panel/story-table-embed';
 import { ChartDisplay } from '@/components/tool-calls/display-chart';
 import { DataTableCard } from '@/components/data-table-card';
-import { alignChartDataToBaselineX } from '@/lib/charts.utils';
 import { cn } from '@/lib/utils';
 
 export type QueryDataMap = Record<string, { data: Record<string, unknown>[]; columns: string[] }>;
@@ -39,8 +38,8 @@ function EmbedLoading() {
 
 function EmbedRefreshing({ children, isRefreshing }: { children: React.ReactNode; isRefreshing: boolean }) {
 	return (
-		<div className='relative'>
-			<div className={cn('transition-opacity duration-150', isRefreshing && 'opacity-50')}>{children}</div>
+		<div className='relative h-full'>
+			<div className={cn('h-full transition-opacity duration-150', isRefreshing && 'opacity-50')}>{children}</div>
 			{isRefreshing && (
 				<div className='pointer-events-none absolute inset-0 flex items-center justify-center'>
 					<Loader2 className='size-5 animate-spin text-muted-foreground' />
@@ -63,14 +62,12 @@ function useLiveQueryData(queryId: string, liveQuery?: LiveQueryConfig) {
 export const StoryChartEmbed = memo(function StoryChartEmbed({
 	chart,
 	queryData,
-	baselineQueryData,
 	liveQuery,
 	hasActiveFilters = false,
 	isRefreshing = false,
 }: {
 	chart: ParsedChartBlock;
 	queryData?: QueryDataMap | null;
-	baselineQueryData?: QueryDataMap | null;
 	liveQuery?: LiveQueryConfig;
 	hasActiveFilters?: boolean;
 	isRefreshing?: boolean;
@@ -80,33 +77,15 @@ export const StoryChartEmbed = memo(function StoryChartEmbed({
 	const resolved = liveQuery
 		? (noCacheFetch.data as { data: Record<string, unknown>[]; columns: string[] } | undefined)
 		: queryData?.[chart.queryId];
-	const baseline = baselineQueryData?.[chart.queryId];
-	const resolvedData = resolved?.data;
-	const resolvedColumns = resolved?.columns ?? baseline?.columns ?? [];
-	const keepsXDomain =
-		hasActiveFilters &&
-		Boolean(baseline?.data?.length) &&
-		!displayChart.isPieChart(chart.chartType as displayChart.ChartType) &&
-		chart.chartType !== 'kpi_card';
+	const displayData = resolved?.data ?? [];
+	const resolvedColumns = resolved?.columns ?? [];
 	const showRefreshing = isRefreshing || Boolean(liveQuery && noCacheFetch.isFetching);
-
-	const displayData = useMemo(() => {
-		if (!keepsXDomain || !baseline?.data) {
-			return resolvedData ?? [];
-		}
-		return alignChartDataToBaselineX(
-			baseline.data,
-			resolvedData ?? [],
-			chart.xAxisKey,
-			chart.series.map((series) => series.data_key),
-		);
-	}, [keepsXDomain, baseline?.data, resolvedData, chart.xAxisKey, chart.series]);
 
 	if (liveQuery && noCacheFetch.isLoading) {
 		return <EmbedLoading />;
 	}
 
-	if (!resolved && !keepsXDomain) {
+	if (!resolved) {
 		return <EmbedPlaceholder>Chart data unavailable</EmbedPlaceholder>;
 	}
 
