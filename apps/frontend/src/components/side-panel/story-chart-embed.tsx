@@ -70,7 +70,12 @@ export const StoryChartEmbed = memo(function StoryChartEmbed({
 	const xAxisType = chart.xAxisType === 'number' ? 'number' : ('category' as const);
 
 	return (
-		<StoryChartEmbedShell chart={chart} availableColumns={sourceData.columns ?? []} dragHandle={dragHandle}>
+		<StoryChartEmbedShell
+			chart={chart}
+			availableColumns={sourceData.columns ?? []}
+			data={sourceData.data ?? []}
+			dragHandle={dragHandle}
+		>
 			<ChartDisplay
 				data={data}
 				chartType={chart.chartType as displayChart.ChartType}
@@ -85,6 +90,7 @@ export const StoryChartEmbed = memo(function StoryChartEmbed({
 				yAxisRightMax={chart.yAxisRightMax}
 				yAxisRightLabel={chart.yAxisRightLabel}
 				showDataLabels={chart.showDataLabels}
+				comparisonMode={chart.comparisonMode}
 				normalSize
 				hideTotal={chart.hideTotal}
 			/>
@@ -95,6 +101,7 @@ export const StoryChartEmbed = memo(function StoryChartEmbed({
 interface StoryChartEmbedShellProps {
 	chart: ChartBlock;
 	availableColumns: string[];
+	data?: Record<string, unknown>[];
 	dragHandle?: React.ReactNode;
 	children: React.ReactNode;
 }
@@ -103,12 +110,18 @@ interface StoryChartEmbedShellProps {
  * Wraps a rendered chart with an "Edit chart" button when the surrounding story
  * context provides a save handler.
  */
-export function StoryChartEmbedShell({ chart, availableColumns, dragHandle, children }: StoryChartEmbedShellProps) {
+export function StoryChartEmbedShell({
+	chart,
+	availableColumns,
+	data,
+	dragHandle,
+	children,
+}: StoryChartEmbedShellProps) {
 	const edit = useStoryChartEdit();
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const canEdit = Boolean(edit && chart.rawTag);
 
-	const config = useMemo<displayChart.ChartInput>(
+	const config = useMemo<displayChart.KpiCardInput>(
 		() => ({
 			query_id: chart.queryId,
 			chart_type: chart.chartType as displayChart.ChartType,
@@ -130,16 +143,30 @@ export function StoryChartEmbedShell({ chart, availableColumns, dragHandle, chil
 			y_axis_right_label: chart.yAxisRightLabel,
 			title: chart.title,
 			show_data_labels: chart.showDataLabels,
+			comparison_mode: chart.comparisonMode,
 			hide_total: chart.hideTotal,
 		}),
 		[chart],
 	);
 
+	const isKpi = chart.chartType === 'kpi_card';
+	const editButton = canEdit ? (
+		<Button
+			variant='ghost-muted'
+			size='icon-xs'
+			onClick={() => setIsEditOpen(true)}
+			title='Edit chart'
+			className='shrink-0 hover:bg-accent hover:rounded-full'
+		>
+			<Pencil className='size-3.5' />
+		</Button>
+	) : null;
+
 	return (
 		<div className='my-2 flex flex-col gap-4'>
-			{(canEdit || dragHandle != null || (chart.chartType != 'kpi_card' && chart.title)) && (
+			{!isKpi && (canEdit || dragHandle != null || chart.title) && (
 				<div className='flex w-full items-center justify-between gap-2'>
-					{chart.chartType != 'kpi_card' && chart.title ? (
+					{chart.title ? (
 						<span className='text-sm font-medium text-foreground flex-1 min-w-0 truncate'>
 							{chart.title}
 						</span>
@@ -148,22 +175,18 @@ export function StoryChartEmbedShell({ chart, availableColumns, dragHandle, chil
 					)}
 					<div className='flex shrink-0 items-center gap-1'>
 						{dragHandle}
-						{canEdit && (
-							<Button
-								variant='ghost-muted'
-								size='icon-xs'
-								onClick={() => setIsEditOpen(true)}
-								title='Edit chart'
-								className='shrink-0 hover:bg-accent hover:rounded-full'
-							>
-								<Pencil className='size-3.5' />
-							</Button>
-						)}
+						{editButton}
 					</div>
 				</div>
 			)}
-			<div className={`relative ${chart.chartType != 'kpi_card' ? STORY_CHART_HEIGHT_CLASS : ''}`}>
+			<div className={`relative ${!isKpi ? STORY_CHART_HEIGHT_CLASS : ''}`}>
 				{children}
+				{isKpi && (dragHandle != null || editButton) && (
+					<div className='absolute top-0 right-0 flex items-center gap-1'>
+						{dragHandle}
+						{editButton}
+					</div>
+				)}
 			</div>
 			{canEdit && edit && chart.rawTag && (
 				<ChartConfigEditDialog
@@ -171,6 +194,7 @@ export function StoryChartEmbedShell({ chart, availableColumns, dragHandle, chil
 					onOpenChange={setIsEditOpen}
 					config={config}
 					availableColumns={availableColumns}
+					data={data}
 					isSaving={edit.isSaving}
 					onSave={(next) => edit.saveChart(chart.rawTag!, next)}
 					description={edit.saveDescription}

@@ -15,6 +15,7 @@ export default createTool<story.Input, story.Output>({
 		'Use "create" to initialize a new story, "update" to search-and-replace within it (producing a new version),',
 		'or "replace" to overwrite the entire content (producing a new version).',
 		'Charts are embedded via <chart query_id="..." chart_type="..." x_axis_key="..." series=\'[...]\' title="..." />.',
+		'For kpi_card charts you may add comparison_mode="percentage|variation|absolute" to show a period-over-period change pill; this requires the query to return at least two time-ordered rows (one per period) for the metric, and kpi_card does not need x_axis_key.',
 		'SQL result tables are embedded via <table query_id="..." title="..." />.',
 		'Use <grid>...</grid> to place 2–4 charts/tables side by side; its direct <chart>/<table> blocks are the columns.',
 		'For unequal columns add widths="w1,w2,..." to the <grid> — one positive integer per column giving its relative width (e.g. widths="2,1" makes the first column twice as wide as the second). The number of values must equal the number of columns; omit widths for equal columns. Choose widths that fit the content, e.g. a wide time-series next to a narrow KPI or pie.',
