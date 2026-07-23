@@ -1,17 +1,20 @@
-import { Pencil } from 'lucide-react';
+import { Code, Pencil } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { StoryEmbedFallback } from './story-embed-fallback';
-import type { UIMessage } from '@nao/backend/chat';
 import type { ParsedChartBlock } from '@nao/shared/story-segments';
 import type { displayChart } from '@nao/shared/tools';
 
+import { StoryChartQueryView } from '@/components/side-panel/story-chart-query';
 import { ChartDisplay } from '@/components/tool-calls/display-chart';
 import { ChartConfigEditDialog } from '@/components/tool-calls/display-chart-edit-dialog';
 import { Button } from '@/components/ui/button';
 import { useOptionalAgentContext } from '@/contexts/agent.provider';
 import { useStoryChartEdit } from '@/contexts/story-chart-edit';
 import { useStoryEmbedData } from '@/contexts/story-embed-data';
+import { useStoryQuerySql } from '@/contexts/story-query-sql';
 import { sortByDateKey } from '@/lib/charts.utils';
+import { findLatestExecuteSqlInMessages } from '@/lib/execute-sql-messages';
+import { cn } from '@/lib/utils';
 
 const STORY_CHART_HEIGHT_CLASS = 'h-72';
 
@@ -33,18 +36,7 @@ export const StoryChartEmbed = memo(function StoryChartEmbed({
 			return fromEmbedData;
 		}
 
-		const findInMessages = (messages: UIMessage[]) => {
-			for (const message of messages) {
-				for (const part of message.parts) {
-					if (part.type === 'tool-execute_sql' && part.output?.id === chart.queryId) {
-						return part.output;
-					}
-				}
-			}
-			return null;
-		};
-
-		return findInMessages(agent?.messages ?? []);
+		return findLatestExecuteSqlInMessages(agent?.messages ?? [], chart.queryId)?.output ?? null;
 	}, [embedData, agent?.messages, chart.queryId]);
 
 	const data = useMemo(
@@ -118,8 +110,11 @@ export function StoryChartEmbedShell({
 	children,
 }: StoryChartEmbedShellProps) {
 	const edit = useStoryChartEdit();
+	const querySqlSource = useStoryQuerySql();
 	const [isEditOpen, setIsEditOpen] = useState(false);
+	const [showQuery, setShowQuery] = useState(false);
 	const canEdit = Boolean(edit && chart.rawTag);
+	const canViewQuery = Boolean(querySqlSource);
 
 	const config = useMemo<displayChart.KpiCardInput>(
 		() => ({
@@ -161,10 +156,21 @@ export function StoryChartEmbedShell({
 			<Pencil className='size-3.5' />
 		</Button>
 	) : null;
+	const queryButton = canViewQuery ? (
+		<Button
+			variant='ghost-muted'
+			size='icon-xs'
+			onClick={() => setShowQuery((current) => !current)}
+			title={showQuery ? 'Hide SQL query' : 'View SQL query'}
+			className={cn('shrink-0 hover:bg-accent hover:rounded-full', showQuery && 'bg-accent rounded-full')}
+		>
+			<Code className='size-3.5' />
+		</Button>
+	) : null;
 
 	return (
 		<div className='my-2 flex flex-col gap-4'>
-			{!isKpi && (canEdit || dragHandle != null || chart.title) && (
+			{!isKpi && (canEdit || canViewQuery || dragHandle != null || chart.title) && (
 				<div className='flex w-full items-center justify-between gap-2'>
 					{chart.title ? (
 						<span className='text-sm font-medium text-foreground flex-1 min-w-0 truncate'>
@@ -175,15 +181,21 @@ export function StoryChartEmbedShell({
 					)}
 					<div className='flex shrink-0 items-center gap-1'>
 						{dragHandle}
+						{queryButton}
 						{editButton}
 					</div>
 				</div>
 			)}
-			<div className={`relative ${!isKpi ? STORY_CHART_HEIGHT_CLASS : ''}`}>
-				{children}
-				{isKpi && (dragHandle != null || editButton) && (
-					<div className='absolute top-0 right-0 flex items-center gap-1'>
+			<div className={cn('relative', !isKpi && !showQuery && STORY_CHART_HEIGHT_CLASS)}>
+				{showQuery && querySqlSource ? (
+					<StoryChartQueryView queryId={chart.queryId} source={querySqlSource} />
+				) : (
+					children
+				)}
+				{isKpi && (dragHandle != null || canViewQuery || canEdit) && (
+					<div className='absolute top-0 right-0 z-10 flex items-center gap-1'>
 						{dragHandle}
+						{queryButton}
 						{editButton}
 					</div>
 				)}

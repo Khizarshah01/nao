@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildStoryChartBlock } from '../src/chart-block';
+import { buildStoryChartBlock, buildStoryFilterBlock } from '../src/chart-block';
 import {
 	getGridTemplateColumns,
+	getStoryFiltersFromCode,
 	groupBlocksIntoGrid,
 	insertGridColumn,
 	parseChartBlock,
@@ -581,5 +582,74 @@ describe('splitCodeIntoSegments slash-in-attribute handling', () => {
 		const chart = chartOf(code);
 		expect(chart?.title).toBe('Revenue');
 		expect(chart?.series).toEqual([{ data_key: 'rev', color: 'var(--chart-1)', label: undefined }]);
+	});
+});
+
+describe('story filter tags', () => {
+	it('parses filter tags from code and as segments', () => {
+		const code = [
+			buildStoryFilterBlock({
+				id: 'country',
+				column: 'country',
+				label: 'Country',
+				type: 'multi_select',
+				table: 'orders',
+			}),
+			'<chart query_id="q1" chart_type="bar" x_axis_key="month" data_key="rev" title="Revenue" />',
+		].join('\n');
+
+		expect(getStoryFiltersFromCode(code)).toEqual([
+			{
+				id: 'country',
+				column: 'country',
+				label: 'Country',
+				filterType: 'multi_select',
+				table: 'orders',
+				rawTag: expect.any(String),
+			},
+		]);
+		expect(splitCodeIntoSegments(code).some((segment) => segment.type === 'filter')).toBe(true);
+	});
+
+	it('parses hardcoded options without table/column', () => {
+		const code = buildStoryFilterBlock({
+			id: 'country',
+			label: 'Country',
+			type: 'select',
+			options: ['US', 'FR'],
+		});
+
+		expect(getStoryFiltersFromCode(code)).toEqual([
+			{
+				id: 'country',
+				label: 'Country',
+				filterType: 'select',
+				options: ['US', 'FR'],
+				rawTag: expect.any(String),
+			},
+		]);
+	});
+
+	it('parses database_id for table-backed filters', () => {
+		const code = buildStoryFilterBlock({
+			id: 'product',
+			column: 'product_name',
+			label: 'Product',
+			type: 'select',
+			table: '`nao-production`.`prod_silver`.`dim_products`',
+			database_id: 'bigquery',
+		});
+
+		expect(getStoryFiltersFromCode(code)).toEqual([
+			{
+				id: 'product',
+				column: 'product_name',
+				label: 'Product',
+				filterType: 'select',
+				table: '`nao-production`.`prod_silver`.`dim_products`',
+				databaseId: 'bigquery',
+				rawTag: expect.any(String),
+			},
+		]);
 	});
 });

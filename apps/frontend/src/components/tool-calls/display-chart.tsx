@@ -49,6 +49,7 @@ import { useSidePanel } from '@/contexts/side-panel';
 import { useToolCallContext } from '@/contexts/tool-call';
 import { StoryViewer } from '@/components/side-panel/story-viewer';
 import { cn } from '@/lib/utils';
+import { findLatestExecuteSqlInMessages } from '@/lib/execute-sql-messages';
 import { ExportDataMenu } from '@/components/export-data-menu';
 
 const Colors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
@@ -107,15 +108,7 @@ export const DisplayChartToolCall = ({
 		if (!chartConfig?.query_id) {
 			return null;
 		}
-
-		for (const message of messages) {
-			for (const part of message.parts) {
-				if (part.type === 'tool-execute_sql' && part.output && part.output.id === chartConfig.query_id) {
-					return { input: part.input, output: part.output };
-				}
-			}
-		}
-		return null;
+		return findLatestExecuteSqlInMessages(messages, chartConfig.query_id);
 	}, [messages, chartConfig?.query_id]);
 
 	const sourceData = sourceQuery?.output ?? null;
@@ -439,6 +432,7 @@ export interface ChartDisplayProps {
 	yAxisRightMax?: number;
 	yAxisRightLabel?: string;
 	showDataLabels?: boolean;
+	animate?: boolean;
 	comparisonMode?: displayChart.ComparisonMode;
 	className?: string;
 	chartContainerClassName?: string;
@@ -467,6 +461,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 	yAxisRightMax,
 	yAxisRightLabel,
 	showDataLabels,
+	animate = false,
 	comparisonMode,
 	className,
 	chartContainerClassName,
@@ -608,6 +603,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 				xAxisMaxLabelChars,
 				showGrid,
 				showDataLabels,
+				animate,
 				comparisonMode,
 				gradientIdPrefix,
 				margin: { top: 0, right: 0, bottom: 0, left: 0 },
@@ -677,6 +673,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 			yAxisRightLabel,
 			isDualAxis,
 			showDataLabels,
+			animate,
 			comparisonMode,
 			gradientIdPrefix,
 			hideTotal,

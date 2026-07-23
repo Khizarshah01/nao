@@ -272,10 +272,13 @@ export function StoryViewer({ chatId, storySlug, isReadonlyMode: readonlyProp, i
 								code={
 									isTabbedStory && tabs ? tabs[activeTab].innerCode : stripStoryTabsMarkup(storyCode)
 								}
+								fullCode={storyCode}
 								cacheSchedule={cacheSchedule}
 								queryData={queryData ?? null}
 								chatId={chatId}
+								storySlug={resolvedStorySlug}
 								versionKey={`${currentVersionNumber}-${cachedAt ?? ''}`}
+								filtersEnabled={isViewingLatest && !isAgentRunning}
 							/>
 						)
 					) : viewMode === 'edit' ? (
