@@ -383,6 +383,10 @@ export const DisplayChartToolCall = ({
 					title={chartConfig.title}
 					yAxisMin={chartConfig.y_axis_min}
 					yAxisMax={chartConfig.y_axis_max}
+					yAxisLabel={chartConfig.y_axis_label}
+					yAxisRightMin={chartConfig.y_axis_right_min}
+					yAxisRightMax={chartConfig.y_axis_right_max}
+					yAxisRightLabel={chartConfig.y_axis_right_label}
 					showDataLabels={chartConfig.show_data_labels}
 					hideTotal={chartConfig.hide_total}
 				/>
@@ -402,6 +406,10 @@ export interface ChartDisplayProps {
 	showGrid?: boolean;
 	yAxisMin?: number;
 	yAxisMax?: number;
+	yAxisLabel?: string;
+	yAxisRightMin?: number;
+	yAxisRightMax?: number;
+	yAxisRightLabel?: string;
 	showDataLabels?: boolean;
 	normalSize?: boolean;
 	hideTotal?: boolean;
@@ -418,17 +426,21 @@ export const ChartDisplay = memo(function ChartDisplay({
 	showGrid = true,
 	yAxisMin,
 	yAxisMax,
+	yAxisLabel,
+	yAxisRightMin,
+	yAxisRightMax,
+	yAxisRightLabel,
 	showDataLabels,
 	normalSize = false,
 	hideTotal,
 }: ChartDisplayProps) {
 	const dateFormat = useDateFormat();
-	const gradientIdPrefix = `${useId().replace(/:/g, '')}-`;
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [width, setWidth] = useState(0);
 	useResizeObserver(containerRef, (element) => {
 		setWidth(element.getBoundingClientRect().width);
 	});
+	const gradientIdPrefix = `${useId().replace(/[^a-zA-Z0-9]/g, '')}-`;
 
 	const xAxisKey = useMemo(() => resolveDataKey(data, xAxisKeyProp), [data, xAxisKeyProp]);
 	const series = useMemo(
@@ -535,6 +547,8 @@ export const ChartDisplay = memo(function ChartDisplay({
 		[isPie, dateFormat],
 	);
 
+	const isDualAxis = displayChart.isComboChart(chartType) && displayChart.hasRightAxisSeries(visibleSeries);
+
 	const chartElement = useMemo(
 		() =>
 			buildChart({
@@ -554,6 +568,10 @@ export const ChartDisplay = memo(function ChartDisplay({
 				margin: { top: 0, right: 0, bottom: 0, left: 0 },
 				yAxisMin,
 				yAxisMax,
+				yAxisLabel,
+				yAxisRightMin,
+				yAxisRightMax,
+				yAxisRightLabel,
 				children: [
 					<ChartTooltip
 						key='tooltip'
@@ -563,6 +581,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 						content={
 							<ChartTooltipContent
 								percent={isPercentStacked}
+								isDualAxis={isDualAxis}
 								hideTotal={hideTotal}
 								labelFormatter={tooltipLabelFormatter}
 							/>
@@ -605,6 +624,11 @@ export const ChartDisplay = memo(function ChartDisplay({
 			showGrid,
 			yAxisMin,
 			yAxisMax,
+			yAxisLabel,
+			yAxisRightMin,
+			yAxisRightMax,
+			yAxisRightLabel,
+			isDualAxis,
 			showDataLabels,
 			gradientIdPrefix,
 			hideTotal,
