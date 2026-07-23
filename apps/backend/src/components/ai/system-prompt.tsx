@@ -25,6 +25,8 @@ type SystemPromptProps = {
 	mcpServers?: string[];
 	timezone?: string;
 	testMode?: boolean;
+	/** Names of the tools in the run's tool set — rules for surface-dependent tools (e.g. display_map) are only emitted when the tool is present. Omit to include every rule. */
+	toolNames?: string[];
 };
 
 export const MEMORY_TOKEN_LIMIT = 1000;
@@ -38,7 +40,9 @@ export function SystemPrompt({
 	mcpServers = [],
 	timezone,
 	testMode,
+	toolNames,
 }: SystemPromptProps) {
+	const hasTool = (name: string) => !toolNames || toolNames.includes(name);
 	const visibleMemories = getMemoriesInTokenRange(memories, MEMORY_TOKEN_LIMIT);
 	const dialectToolCallRules = getDialectToolCallRules(connections);
 	const dialectSqlQueryRules = getDialectSqlQueryRules(connections);
@@ -101,6 +105,13 @@ export function SystemPrompt({
 			</List>
 			<Title level={2}>Chart Rules</Title>
 			<List>
+				{hasTool('display_map') && (
+					<ListItem>
+						Use display_map instead of display_chart for spatial point data: query results with latitude and
+						longitude columns (store locations, delivery points, events). Coordinates must be in decimal
+						degrees — select or convert them in SQL if needed.
+					</ListItem>
+				)}
 				<ListItem>
 					For display_chart x_axis_type: use "date" only when x-axis values are parseable by JavaScript Date
 					(e.g. YYYY-MM-DD). Use "category" for quarter labels (quarter_ending), fiscal periods (FY25-Q1), or

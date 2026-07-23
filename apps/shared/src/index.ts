@@ -5,6 +5,7 @@ export * from './chart-plugin';
 export * from './citation';
 export * from './date';
 export * from './execute-sql-parts';
+export * from './map-points';
 export * from './mcp';
 export * from './mcp-embed';
 export * from './mentions';

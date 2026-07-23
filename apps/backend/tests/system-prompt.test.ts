@@ -112,3 +112,15 @@ describe('SystemPrompt timezone rendering', () => {
 		expect(markdown).toContain(`${'x'.repeat(199)}…`);
 	});
 });
+
+describe('SystemPrompt display_map rules', () => {
+	it('includes the display_map rule by default', () => {
+		expect(renderToMarkdown(SystemPrompt({}))).toContain('display_map');
+	});
+
+	it('omits the display_map rule when the run excludes the tool', () => {
+		expect(renderToMarkdown(SystemPrompt({ toolNames: ['execute_sql', 'display_chart'] }))).not.toContain(
+			'display_map',
+		);
+	});
+});

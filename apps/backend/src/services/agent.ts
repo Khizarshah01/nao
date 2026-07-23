@@ -115,6 +115,12 @@ export type AgentToolsResolver = (context: AgentToolsContext) => AgentTools | Pr
 export const defaultAgentTools: AgentToolsResolver = ({ chat, agentSettings, webTools }) =>
 	getTools(agentSettings, webTools ?? {}, { testMode: chat.testMode });
 
+/** Default tool set minus the given built-ins — for runs whose surface cannot render them. */
+export const defaultAgentToolsExcluding =
+	(excludeBuiltinTools: string[]): AgentToolsResolver =>
+	({ chat, agentSettings, webTools }) =>
+		getTools(agentSettings, webTools ?? {}, { testMode: chat.testMode, excludeBuiltinTools });
+
 /**
  * Admin-mode tool set: the same `execute_sql` tool the chat already uses (it
  * runs against nao's own app database when `ToolContext.adminMode` is set),
@@ -601,6 +607,7 @@ class AgentManager {
 				mcpServers,
 				timezone,
 				testMode: this.chat.testMode,
+				toolNames: Object.keys(this._agentTools),
 			}),
 		);
 		const renderedPrompt = provider
