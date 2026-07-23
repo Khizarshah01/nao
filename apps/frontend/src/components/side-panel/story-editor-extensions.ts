@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { TableKit } from '@tiptap/extension-table';
 import { Markdown } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
+import { BlockSelection } from './story-block-selection';
 import { ChartBlock } from './story-editor-chart-block';
 import { GridBlock } from './story-editor-grid-block';
 import { TableBlock } from './story-editor-table-block';
@@ -88,4 +89,5 @@ export const EDITOR_EXTENSIONS = [
 	ChartBlock,
 	TableBlock,
 	GridBlock,
+	BlockSelection,
 ];

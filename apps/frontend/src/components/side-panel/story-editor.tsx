@@ -16,15 +16,29 @@ interface StoryEditorProps {
 }
 
 export const StoryEditor = memo(function StoryEditor({ code, editorRef, onSave }: StoryEditorProps) {
-	const { editor, gridDragSourceRef, storyBlockDragContext, handleDragHandleNodeChange, handleNodeType } =
-		useStoryEditor({ code, editorRef, onSave });
+	const {
+		editor,
+		gridDragSourceRef,
+		storyBlockDragContext,
+		handleDragHandleNodeChange,
+		handleNodeType,
+		storyEditorRef,
+		onElementDragStart,
+		onElementDragEnd,
+	} = useStoryEditor({ code, editorRef, onSave });
 
 	return (
 		<GridDragContext.Provider value={gridDragSourceRef}>
 			<StoryBlockDragContext.Provider value={storyBlockDragContext}>
-				<div className='story-editor relative'>
+				<div ref={storyEditorRef} className='story-editor relative'>
 					{editor && (
-						<DragHandle editor={editor} className='drag-handle' onNodeChange={handleDragHandleNodeChange}>
+						<DragHandle
+							editor={editor}
+							className='drag-handle'
+							onNodeChange={handleDragHandleNodeChange}
+							onElementDragStart={onElementDragStart}
+							onElementDragEnd={onElementDragEnd}
+						>
 							{handleNodeType === 'chartBlock' || handleNodeType === 'tableBlock' ? null : (
 								<div className='drag-handle-button'>
 									<GripVertical className='size-4' />

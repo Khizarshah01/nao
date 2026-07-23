@@ -1,6 +1,8 @@
 import { popGridColumn, TAG_ATTRS } from '@nao/shared/story-segments';
+import { Selection } from '@tiptap/pm/state';
 import type { Node as PMNode, Schema } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import type { CardOrigin } from './story-editor-drag-context';
 
 function encodeForAttr(str: string): string {
@@ -80,4 +82,35 @@ export function removeCardFromOrigin(transaction: Transaction, state: EditorStat
 		transaction.mapping.map(origin.gridPos + gridNode.nodeSize),
 		remainingNode,
 	);
+}
+
+export function cloneElementWithStyles(node: HTMLElement): HTMLElement {
+	const clone = node.cloneNode(true) as HTMLElement;
+	const sources = [node, ...Array.from(node.getElementsByTagName('*'))];
+	const targets = [clone, ...Array.from(clone.getElementsByTagName('*'))];
+	sources.forEach((source, index) => {
+		const target = targets[index];
+		if (!(target instanceof HTMLElement || target instanceof SVGElement)) {
+			return;
+		}
+		const computed = window.getComputedStyle(source as Element);
+		let cssText = '';
+		for (const property of computed) {
+			cssText += `${property}:${computed.getPropertyValue(property)};`;
+		}
+		target.style.cssText = cssText;
+	});
+	return clone;
+}
+
+export function dispatchDropWithScroll(view: EditorView, transaction: Transaction, pos: number): void {
+	const target = Math.max(0, Math.min(pos, transaction.doc.content.size));
+	transaction.setSelection(Selection.near(transaction.doc.resolve(target)));
+	view.dispatch(transaction);
+	requestAnimationFrame(() => {
+		const clamped = Math.max(0, Math.min(pos, view.state.doc.content.size));
+		const dom = view.nodeDOM(clamped);
+		const element = dom instanceof HTMLElement ? dom : (dom?.parentElement ?? null);
+		element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+	});
 }

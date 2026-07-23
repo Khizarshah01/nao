@@ -3,7 +3,7 @@ import { appendBlockToStoryCode } from '@nao/shared/story-tabs';
 import { displayChart } from '@nao/shared/tools';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChartNoAxesColumn, Code, Download, FilePlus, Pencil, Table as TableIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useId, useMemo, useRef, useState } from 'react';
 
 import { useOptionalAgentContext } from '../../contexts/agent.provider';
 import GraphLoaderAnimated from '../icons/graph-loader-animated';
@@ -413,6 +413,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 	hideTotal,
 }: ChartDisplayProps) {
 	const dateFormat = useDateFormat();
+	const gradientIdPrefix = `${useId().replace(/:/g, '')}-`;
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [width, setWidth] = useState(0);
 	useResizeObserver(containerRef, (element) => {
@@ -539,6 +540,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 				xAxisMaxLabelChars,
 				showGrid,
 				showDataLabels,
+				gradientIdPrefix,
 				margin: { top: 0, right: 0, bottom: 0, left: 0 },
 				yAxisMin,
 				yAxisMax,
@@ -594,6 +596,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 			yAxisMin,
 			yAxisMax,
 			showDataLabels,
+			gradientIdPrefix,
 			hideTotal,
 			legendPayload,
 			handleToggleSeriesVisibility,
