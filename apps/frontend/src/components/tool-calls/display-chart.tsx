@@ -517,6 +517,9 @@ export const ChartDisplay = memo(function ChartDisplay({
 					[xAxisKey]: {
 						label: labelize(xAxisKey, dateFormat),
 					},
+					[pieValueKey]: {
+						valueFormat: series[0]?.value_format,
+					},
 				},
 			);
 		}
@@ -526,10 +529,11 @@ export const ChartDisplay = memo(function ChartDisplay({
 				label: s.label || labelize(s.data_key, dateFormat),
 				color: s.color || Colors[idx % Colors.length],
 				isTotal: s.is_total,
+				valueFormat: s.value_format,
 			};
 			return acc;
 		}, {} as ChartConfig);
-	}, [series, xAxisKey, pieData, isPie, dateFormat]);
+	}, [series, xAxisKey, pieValueKey, pieData, isPie, dateFormat]);
 
 	const colorFor = useMemo(
 		() =>
@@ -628,6 +632,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 								isDualAxis={isDualAxis}
 								hideTotal={hideTotal}
 								labelFormatter={tooltipLabelFormatter}
+								nameKey={isPie ? pieValueKey : undefined}
 								valueFormatter={valueFormatter}
 							/>
 						}
@@ -661,6 +666,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 			xAxisTickFontSize,
 			xAxisMaxLabelChars,
 			xAxisKey,
+			pieValueKey,
 			xAxisType,
 			visibleSeries,
 			colorFor,
