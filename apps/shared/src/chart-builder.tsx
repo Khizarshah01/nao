@@ -308,6 +308,7 @@ export interface BuildChartProps {
 	renderTitle?: boolean;
 	maxXAxisTicks?: number;
 	compactXAxis?: boolean;
+	compactXAxisInterval?: number;
 	xAxisTickFontSize?: number;
 	xAxisMaxLabelChars?: number;
 	xAxisLabel?: string;
@@ -326,6 +327,8 @@ export interface BuildChartProps {
 	animate?: boolean;
 	comparisonMode?: displayChart.ComparisonMode;
 	idPrefix?: string;
+	/** Optional node rendered inline to the left of the first KPI card's title (used for a per-column drag handle in the story editor). */
+	kpiLeadingSlot?: React.ReactNode;
 }
 
 const CHART_ANIMATION_DURATION_MS = 400;
@@ -340,7 +343,7 @@ export function buildChart(props: BuildChartProps) {
 	const resolved = buildResolved(props);
 
 	if (resolved.chartType === 'kpi_card') {
-		return buildKpiCard(resolved);
+		return buildKpiCard(resolved, props.kpiLeadingSlot);
 	}
 	if (displayChart.isPieChart(resolved.chartType)) {
 		return buildPieChart(resolved);
@@ -519,18 +522,19 @@ export function niceAxisMax(dataMax: number, tickCount = 5): number {
 	return niceStep * Math.ceil(dataMax / niceStep);
 }
 
-function buildKpiCard(props: ResolvedProps) {
-	const { data, series } = props;
+function buildKpiCard(props: ResolvedProps, leadingSlot?: React.ReactNode) {
+	const { data, series, valueFormatter } = props;
 
 	return (
 		<KpiCardContainer>
-			{series.map((s) => (
+			{series.map((s, index) => (
 				<KpiCard
 					key={s.data_key}
 					value={data[data.length - 1]?.[s.data_key]}
 					displayName={s.label ?? s.data_key}
 					comparison={computeKpiComparison(data, props.xAxisKey, s.data_key, props.comparisonMode)}
 					valueFormat={s.value_format}
+					leadingSlot={index === 0 ? leadingSlot : undefined}
 				/>
 			))}
 		</KpiCardContainer>
@@ -538,7 +542,7 @@ function buildKpiCard(props: ResolvedProps) {
 }
 
 function KpiCardContainer({ children }: { children: React.ReactNode }) {
-	return <div className='flex flex-wrap gap-4 w-full justify-start'>{children}</div>;
+	return <div className='flex w-full flex-wrap justify-start gap-4'>{children}</div>;
 }
 
 function KpiCard({
@@ -546,11 +550,13 @@ function KpiCard({
 	displayName,
 	comparison,
 	valueFormat,
+	leadingSlot,
 }: {
 	value: unknown;
 	displayName: string;
 	comparison: KpiComparison | null;
 	valueFormat?: displayChart.ValueFormat;
+	leadingSlot?: React.ReactNode;
 }) {
 	let formattedValue = '';
 
@@ -569,7 +575,10 @@ function KpiCard({
 
 	return (
 		<div className='min-w-[160px]'>
-			<div className='text-lg tracking-wide'>{displayName}</div>
+			<div className='flex items-center gap-1'>
+				{leadingSlot}
+				<div className='text-lg tracking-wide'>{displayName}</div>
+			</div>
 			<div className='text-3xl font-medium tabular-nums'>{formattedValue}</div>
 			{comparison && (
 				<div className={`mt-1.5 flex items-center gap-1.5 whitespace-nowrap text-sm ${pillColorClass}`}>
@@ -631,6 +640,7 @@ function renderCategoryXAxis({
 	xAxisInterval,
 	labelFormatter,
 	compact,
+	compactInterval,
 	tickFontSize,
 	maxLabelChars,
 	xAxisLabel,
@@ -640,6 +650,7 @@ function renderCategoryXAxis({
 	xAxisInterval?: number;
 	labelFormatter: (value: string) => string;
 	compact?: boolean;
+	compactInterval?: number;
 	tickFontSize?: number;
 	maxLabelChars?: number;
 	xAxisLabel?: string;
@@ -665,7 +676,7 @@ function renderCategoryXAxis({
 			tickMargin={10}
 			axisLine={false}
 			minTickGap={12}
-			interval={compact ? 0 : xAxisInterval}
+			interval={compact ? (compactInterval ?? 0) : xAxisInterval}
 			tickFormatter={tickFormatter}
 			height={CATEGORY_XAXIS_HEIGHT + (xAxisLabel ? X_AXIS_LABEL_HEIGHT : 0)}
 			label={xAxisLabelProps(xAxisLabel)}
@@ -687,6 +698,7 @@ function buildBarChart(props: ResolvedProps) {
 		margin,
 		xAxisInterval,
 		compactXAxis,
+		compactXAxisInterval,
 		xAxisTickFontSize,
 		xAxisMaxLabelChars,
 		series,
@@ -730,6 +742,7 @@ function buildBarChart(props: ResolvedProps) {
 				xAxisInterval,
 				labelFormatter,
 				compact: compactXAxis,
+				compactInterval: compactXAxisInterval,
 				tickFontSize: xAxisTickFontSize,
 				maxLabelChars: xAxisMaxLabelChars,
 				xAxisLabel,
@@ -813,6 +826,7 @@ function buildAreaChart(props: ResolvedProps) {
 		margin,
 		xAxisInterval,
 		compactXAxis,
+		compactXAxisInterval,
 		xAxisTickFontSize,
 		xAxisMaxLabelChars,
 		xAxisLabel,
@@ -869,6 +883,7 @@ function buildAreaChart(props: ResolvedProps) {
 				xAxisInterval,
 				labelFormatter,
 				compact: compactXAxis,
+				compactInterval: compactXAxisInterval,
 				tickFontSize: xAxisTickFontSize,
 				maxLabelChars: xAxisMaxLabelChars,
 				xAxisLabel,
@@ -917,7 +932,10 @@ function buildComboChart(props: ResolvedProps) {
 		children,
 		margin,
 		xAxisInterval,
-		xAxisLabel,
+		compactXAxis,
+		compactXAxisInterval,
+		xAxisTickFontSize,
+		xAxisMaxLabelChars,
 		yAxisMin,
 		yAxisMax,
 		yAxisLabel,
@@ -995,7 +1013,10 @@ function buildComboChart(props: ResolvedProps) {
 				xAxisType: xAxisType ?? 'category',
 				xAxisInterval,
 				labelFormatter,
-				xAxisLabel,
+				compact: compactXAxis,
+				compactInterval: compactXAxisInterval,
+				tickFontSize: xAxisTickFontSize,
+				maxLabelChars: xAxisMaxLabelChars,
 			})}
 			{children}
 			{series.map((s, i) =>
