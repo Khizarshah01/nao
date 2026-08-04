@@ -1,13 +1,8 @@
 import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import {
-	buildChart,
-	computeValueAxisWidth,
-	formatChartValue,
-	computeKpiComparison,
-	describePreviousPeriod,
-} from '../src/chart-builder';
+import { buildChart, computeKpiComparison, computeValueAxisWidth, describePreviousPeriod } from '../src/chart-builder';
+import { formatChartValue } from '../src/chart-values';
 
 describe('formatChartValue', () => {
 	it('uses locale formatting by default', () => {
