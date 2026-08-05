@@ -32,7 +32,7 @@ import {
 	shouldReserveDataLabelHeadroom,
 	shouldReserveStackTotalFootroom,
 } from './chart-data-labels';
-import { collectAxisValues, collectStackedAxisValues, resolveYAxisDomain } from './chart-domain';
+import { collectAxisValues, collectStackedAxisValues, resolveBarYAxisDomain, resolveYAxisDomain } from './chart-domain';
 import {
 	attachValueAffixes,
 	formatChartValue,
@@ -616,14 +616,18 @@ function buildBarChart(props: ResolvedProps) {
 	} = props;
 	const isStacked = displayChart.isStackedChartType(chartType);
 	const isPercent = displayChart.isPercentStackedChartType(chartType);
-	const dataKeys = series.map((s) => s.data_key);
-	const axisValues = isStacked ? collectStackedAxisValues(data, dataKeys) : collectAxisValues(data, dataKeys);
 	const { renderedSeries, stackTotalLayer } = getDataLabelSetup(props, isStacked);
+	const dataKeys = renderedSeries.map((s) => s.data_key);
+	const axisValues = isStacked ? collectStackedAxisValues(data, dataKeys) : collectAxisValues(data, dataKeys);
 	const seriesKeys = renderedSeries.map((s) => s.data_key);
 	const separatorColor = props.backgroundColor ?? DEFAULT_BACKGROUND;
 	const labelFootroom = shouldReserveStackTotalFootroom(props) ? DATA_LABEL_X_AXIS_FOOTROOM : 0;
 	const chartLevelFormat = getChartLevelValueFormat(series);
-	const valueAxisWidth = computeValueAxisWidth(axisValues, chartLevelFormat, Boolean(yAxisLabel));
+	const yAxisDomain = isPercent
+		? undefined
+		: resolveBarYAxisDomain(yAxisMin, yAxisMax, axisValues, showDataLabels === true);
+	const valueAxisValues = typeof yAxisDomain?.[1] === 'number' ? [...axisValues, yAxisDomain[1]] : axisValues;
+	const valueAxisWidth = computeValueAxisWidth(valueAxisValues, chartLevelFormat, Boolean(yAxisLabel));
 	const dataLabelsLayer = showDataLabels && !isStacked ? renderDataLabelsLayer(series) : undefined;
 
 	return (
@@ -639,7 +643,7 @@ function buildBarChart(props: ResolvedProps) {
 					axisLine={false}
 					minTickGap={12}
 					tickFormatter={(value: number) => formatValueYAxisTick(value, chartLevelFormat)}
-					domain={resolveYAxisDomain(yAxisMin, yAxisMax, axisValues, true)}
+					domain={yAxisDomain}
 					allowDataOverflow={yAxisMin !== undefined || yAxisMax !== undefined}
 					label={axisLabel(yAxisLabel, 'left')}
 				/>
@@ -742,9 +746,9 @@ function buildAreaChart(props: ResolvedProps) {
 	const isStacked = displayChart.isStackedChartType(chartType);
 	const isPercent = displayChart.isPercentStackedChartType(chartType);
 	const zeroBaseline = chartType !== 'line';
-	const dataKeys = series.map((s) => s.data_key);
-	const axisValues = isStacked ? collectStackedAxisValues(data, dataKeys) : collectAxisValues(data, dataKeys);
 	const { renderedSeries, stackTotalLayer } = getDataLabelSetup(props, isStacked);
+	const dataKeys = renderedSeries.map((s) => s.data_key);
+	const axisValues = isStacked ? collectStackedAxisValues(data, dataKeys) : collectAxisValues(data, dataKeys);
 	const labelFootroom = shouldReserveStackTotalFootroom(props) ? DATA_LABEL_X_AXIS_FOOTROOM : 0;
 	const chartLevelFormat = getChartLevelValueFormat(series);
 	const valueAxisWidth = computeValueAxisWidth(axisValues, chartLevelFormat, Boolean(yAxisLabel));
