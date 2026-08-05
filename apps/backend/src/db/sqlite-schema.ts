@@ -1,4 +1,4 @@
-import type { McpChartEmbedStoredConfig } from '@nao/shared';
+import type { MapSettings, McpChartEmbedStoredConfig, McpMapEmbedStoredConfig } from '@nao/shared';
 import type { DisplaySettings } from '@nao/shared/date';
 import type {
 	AnalyticsEventMetadata,
@@ -216,6 +216,7 @@ export const project = sqliteTable(
 		whatsappSettings: text('whatsapp_settings', { mode: 'json' }).$type<WhatsappSettings>(),
 		mcpEndpointSettings: text('mcp_endpoint_settings', { mode: 'json' }).$type<McpEndpointSettings>(),
 		displaySettings: text('display_settings', { mode: 'json' }).$type<DisplaySettings>(),
+		mapSettings: text('map_settings', { mode: 'json' }).$type<MapSettings>(),
 
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -869,6 +870,22 @@ export const mcpChartEmbed = sqliteTable(
 			.notNull(),
 	},
 	(t) => [index('mcp_chart_embed_query_id_idx').on(t.queryId)],
+);
+
+export const mcpMapEmbed = sqliteTable(
+	'mcp_map_embed',
+	{
+		mapEmbedId: text('map_embed_id').primaryKey(),
+		queryId: text('query_id')
+			.notNull()
+			.references(() => mcpQueryData.queryId, { onDelete: 'cascade' }),
+		mapConfig: text('map_config', { mode: 'json' }).$type<McpMapEmbedStoredConfig>().notNull(),
+		sourceChatId: text('source_chat_id'),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(t) => [index('mcp_map_embed_query_id_idx').on(t.queryId)],
 );
 
 export const storyDataCache = sqliteTable('story_data_cache', {

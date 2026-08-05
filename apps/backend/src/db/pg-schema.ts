@@ -1,4 +1,4 @@
-import type { McpChartEmbedStoredConfig } from '@nao/shared';
+import type { MapSettings, McpChartEmbedStoredConfig, McpMapEmbedStoredConfig } from '@nao/shared';
 import type { DisplaySettings } from '@nao/shared/date';
 import type {
 	AnalyticsEventMetadata,
@@ -201,6 +201,7 @@ export const project = pgTable(
 		whatsappSettings: jsonb('whatsapp_settings').$type<WhatsappSettings>(),
 		mcpEndpointSettings: jsonb('mcp_endpoint_settings').$type<McpEndpointSettings>(),
 		displaySettings: jsonb('display_settings').$type<DisplaySettings>(),
+		mapSettings: jsonb('map_settings').$type<MapSettings>(),
 
 		createdAt: timestamp('created_at').defaultNow().notNull(),
 		updatedAt: timestamp('updated_at')
@@ -811,6 +812,20 @@ export const mcpChartEmbed = pgTable(
 		createdAt: timestamp('created_at').defaultNow().notNull(),
 	},
 	(t) => [index('mcp_chart_embed_query_id_idx').on(t.queryId)],
+);
+
+export const mcpMapEmbed = pgTable(
+	'mcp_map_embed',
+	{
+		mapEmbedId: text('map_embed_id').primaryKey(),
+		queryId: text('query_id')
+			.notNull()
+			.references(() => mcpQueryData.queryId, { onDelete: 'cascade' }),
+		mapConfig: jsonb('map_config').$type<McpMapEmbedStoredConfig>().notNull(),
+		sourceChatId: text('source_chat_id'),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+	},
+	(t) => [index('mcp_map_embed_query_id_idx').on(t.queryId)],
 );
 
 export const storyDataCache = pgTable('story_data_cache', {
