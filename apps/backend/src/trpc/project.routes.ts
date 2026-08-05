@@ -12,6 +12,7 @@ import { getProviderAuth, KNOWN_MODELS } from '../agents/providers';
 import { getDatabaseObjects } from '../agents/user-rules';
 import { env } from '../env';
 import * as chatQueries from '../queries/chat.queries';
+import * as crQueries from '../queries/context-recommendation.queries';
 import * as projectQueries from '../queries/project.queries';
 import * as llmConfigQueries from '../queries/project-llm-config.queries';
 import * as savedPromptQueries from '../queries/project-saved-prompt.queries';
@@ -931,11 +932,29 @@ export const projectRoutes = {
 			}
 
 			const ownerName = ownerId ? await userQueries.getUserName(ownerId) : null;
+
+			const downvotedMessageIds = (chat.messages ?? [])
+				.filter((m) => m.feedback?.vote === 'down')
+				.map((m) => m.id);
+			const recLinks = await crQueries.getRecommendationLinksForMessages(ctx.project.id, downvotedMessageIds);
+			const feedbackRecommendations: Record<
+				string,
+				{ id: string; title: string; status: (typeof recLinks)[number]['status'] }
+			> = {};
+			for (const link of recLinks) {
+				feedbackRecommendations[link.messageId] ??= {
+					id: link.recommendationId,
+					title: link.title,
+					status: link.status,
+				};
+			}
+
 			return {
 				...chat,
 				ownerId: ownerId ?? null,
 				ownerName,
 				chatOwnerId: ownerId ?? null,
+				feedbackRecommendations,
 			};
 		}),
 

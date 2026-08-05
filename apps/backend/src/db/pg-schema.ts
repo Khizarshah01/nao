@@ -38,11 +38,13 @@ import { AgentSettings } from '../types/agent-settings';
 import { AUTOMATION_RUN_STATUSES, AutomationIntegrationConfig, AutomationIntegrationResult } from '../types/automation';
 import { ForkMetadata, MESSAGE_SOURCES, StopReason, ToolState, UIMessagePartType } from '../types/chat';
 import {
+	CONTEXT_RECOMMENDATION_CATEGORIES,
 	CONTEXT_RECOMMENDATION_FIX_KINDS,
+	CONTEXT_RECOMMENDATION_FIX_TARGETS,
 	CONTEXT_RECOMMENDATION_FREQUENCIES,
+	CONTEXT_RECOMMENDATION_ROOT_CAUSE_KINDS,
 	CONTEXT_RECOMMENDATION_RUN_STATUSES,
 	CONTEXT_RECOMMENDATION_RUN_TRIGGERS,
-	CONTEXT_RECOMMENDATION_SEVERITIES,
 	CONTEXT_RECOMMENDATION_STATUSES,
 	ProposedEdit,
 	RecommendationImpact,
@@ -679,8 +681,6 @@ export const contextRecommendation = pgTable(
 		suggestedFile: text('suggested_file').notNull(),
 		subjectKey: text('subject_key').notNull(),
 		status: text('status', { enum: CONTEXT_RECOMMENDATION_STATUSES }).notNull().default('open'),
-		snoozedUntil: timestamp('snoozed_until'),
-		severity: text('severity', { enum: CONTEXT_RECOMMENDATION_SEVERITIES }).notNull().default('medium'),
 		impactScore: integer('impact_score').notNull().default(0),
 		impact: jsonb('impact').$type<RecommendationImpact>(),
 		insights: jsonb('insights').$type<RecommendationInsight[]>().notNull().default([]),
@@ -688,6 +688,10 @@ export const contextRecommendation = pgTable(
 		summary: text('summary').notNull(),
 		suggestedAction: text('suggested_action').notNull(),
 		fixKind: text('fix_kind', { enum: CONTEXT_RECOMMENDATION_FIX_KINDS }),
+		fixTarget: text('fix_target', { enum: CONTEXT_RECOMMENDATION_FIX_TARGETS }),
+		category: text('category', { enum: CONTEXT_RECOMMENDATION_CATEGORIES }),
+		rootCause: text('root_cause'),
+		rootCauseKind: text('root_cause_kind', { enum: CONTEXT_RECOMMENDATION_ROOT_CAUSE_KINDS }),
 		proposedEdits: jsonb('proposed_edits').$type<ProposedEdit[]>(),
 		fixGuidance: text('fix_guidance'),
 		fixPrompt: text('fix_prompt'),
@@ -714,6 +718,23 @@ export const contextRecommendation = pgTable(
 			foreignColumns: [contextRecommendationRun.id, contextRecommendationRun.projectId],
 			name: 'context_recommendation_run_fk',
 		}),
+	],
+);
+
+export const contextRecommendationLinkedFeedback = pgTable(
+	'context_recommendation_linked_feedback',
+	{
+		recommendationId: text('recommendation_id')
+			.notNull()
+			.references(() => contextRecommendation.id, { onDelete: 'cascade' }),
+		messageId: text('message_id')
+			.notNull()
+			.references(() => chatMessage.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+	},
+	(t) => [
+		primaryKey({ columns: [t.recommendationId, t.messageId] }),
+		index('context_recommendation_linked_feedback_message_id_idx').on(t.messageId),
 	],
 );
 
