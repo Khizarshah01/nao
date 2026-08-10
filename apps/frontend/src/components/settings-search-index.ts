@@ -57,13 +57,6 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
 	{
 		page: '/settings/account',
 		pageLabel: 'Account',
-		title: 'GitHub',
-		description: 'Connect your GitHub account for automations.',
-		keywords: ['github', 'automations', 'automation', 'issue', 'pull request'],
-	},
-	{
-		page: '/settings/account',
-		pageLabel: 'Account',
 		title: 'GitLab',
 		description: 'Connect your GitLab account for automations.',
 		keywords: ['gitlab', 'automations', 'automation', 'merge request'],
@@ -129,14 +122,6 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
 		title: 'Project Information',
 		description: 'View your project name and path.',
 		keywords: ['project name', 'project path'],
-	},
-	{
-		page: '/settings/project',
-		pageLabel: 'Project',
-		title: 'Repository',
-		description: 'View linked GitHub repository and pull latest changes.',
-		keywords: ['github', 'git', 'pull', 'sync', 'repository', 'refresh'],
-		adminOnly: true,
 	},
 	{
 		page: '/settings/project',
@@ -327,6 +312,34 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
 			'connect',
 			'oauth',
 		],
+	},
+
+	// ── Git ──────────────────────────────────────────────────
+	{
+		page: '/settings/git',
+		pageLabel: 'Git',
+		title: 'Connect your context files',
+		description:
+			'Connect the Git repository for context files so they can be edited and proposed as pull requests.',
+		keywords: [
+			'github',
+			'git',
+			'oauth',
+			'client id',
+			'client secret',
+			'redeploy',
+			'restart',
+			'repository',
+			'repo',
+			'connect',
+			'disconnect',
+			'context files',
+			'account',
+			'personal',
+			'pull request',
+			'pull request author',
+		],
+		adminOrContextAdmin: true,
 	},
 
 	// ── MCP Endpoint ────────────────────────────────────────
@@ -674,6 +687,6 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
 		title: 'File Explorer',
 		description: 'Browse and inspect the files and context available to the agent.',
 		keywords: ['files', 'context', 'documents', 'knowledge base'],
-		adminOnly: true,
+		adminOrContextAdmin: true,
 	},
 ];
