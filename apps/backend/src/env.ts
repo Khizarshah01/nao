@@ -87,6 +87,9 @@ const envSchema = z.object({
 	OIDC_SCOPES: z.string().optional(),
 	OIDC_AUTH_DOMAINS: z.string().optional(),
 	OIDC_PKCE: z.string().optional(),
+	OIDC_GROUPS_CLAIM: z.string().optional(),
+	OIDC_GROUP_ROLE_MAPPING: z.string().optional(),
+	SSO_SESSION_MAX_AGE: z.coerce.number().int().positive().optional(),
 
 	SMTP_PASSWORD: z.string().optional(),
 	SMTP_HOST: z.string().optional(),
