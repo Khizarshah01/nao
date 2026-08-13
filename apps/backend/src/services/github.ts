@@ -2,6 +2,13 @@ import { execFileSync } from 'node:child_process';
 
 import { env } from '../env';
 import { GitIdentity, NAO_CO_AUTHOR, withCoAuthors } from '../utils/git-identity';
+import {
+	configDir,
+	isContextConfigFile,
+	shallowestSubPath,
+	SUBPATH_SCAN_IGNORED_DIRS,
+	SUBPATH_SCAN_MAX_DEPTH,
+} from './git-repo';
 
 export { NAO_CO_AUTHOR };
 
@@ -187,10 +194,10 @@ export function publicRepoUrl(repoFullName: string): string {
 	return `https://github.com/${repoFullName}.git`;
 }
 
-export function cloneRepo(token: string, fullName: string, targetDir: string): void {
+export function cloneRepo(token: string, fullName: string, targetDir: string, branch?: string): void {
 	const cloneUrl = authenticatedRepoUrl(token, fullName);
 	const cleanUrl = publicRepoUrl(fullName);
-	execFileSync('git', ['clone', '--depth', '1', cloneUrl, targetDir], {
+	execFileSync('git', ['clone', '--depth', '1', ...(branch ? ['--branch', branch] : []), cloneUrl, targetDir], {
 		timeout: 120_000,
 		stdio: 'pipe',
 	});
@@ -567,6 +574,97 @@ export async function getFileContent(
 	};
 }
 
+/** Ceiling on serial Trees API round-trips so resolving a truncated monorepo can't fan out unbounded or hit rate limits. */
+const SUBPATH_SCAN_MAX_TREE_REQUESTS = 150;
+/** How many `GET /git/trees/{sha}` lookups run in parallel per level of the fallback walk. */
+const SUBPATH_SCAN_CONCURRENCY = 8;
+
+export class IncompleteContextConfigScanError extends Error {
+	constructor(repo: string) {
+		super(
+			`Could not determine the nao_config.yaml location in ${repo}: the repository has more candidate directories than the scan budget allows.`,
+		);
+		this.name = 'IncompleteContextConfigScanError';
+	}
+}
+
+export async function findContextConfigSubPath(token: string, repo: string): Promise<string> {
+	try {
+		const { default_branch } = await githubFetchJson<{ default_branch: string }>(token, `/repos/${repo}`);
+		const tree = await githubFetchJson<RawGitTree>(
+			token,
+			`/repos/${repo}/git/trees/${encodeURIComponent(default_branch)}?recursive=1`,
+		);
+		if (tree.truncated) {
+			return await walkForContextConfigSubPath(token, repo, default_branch);
+		}
+		const dirs = tree.tree
+			.filter((entry) => entry.type === 'blob' && isContextConfigFile(entry.path))
+			.map((entry) => configDir(entry.path));
+		return shallowestSubPath(dirs);
+	} catch (error) {
+		if (error instanceof IncompleteContextConfigScanError) {
+			throw error;
+		}
+		return '';
+	}
+}
+
+/** Fallback for repos whose recursive tree is truncated: walks the tree one directory level at a time and returns the shallowest directory holding the config. */
+async function walkForContextConfigSubPath(token: string, repo: string, rootSha: string): Promise<string> {
+	let level: { sha: string; prefix: string }[] = [{ sha: rootSha, prefix: '' }];
+	let remainingRequests = SUBPATH_SCAN_MAX_TREE_REQUESTS;
+	for (let depth = 0; depth <= SUBPATH_SCAN_MAX_DEPTH && level.length > 0; depth++) {
+		const scanned = level.slice(0, remainingRequests);
+		remainingRequests -= scanned.length;
+
+		const matches: string[] = [];
+		const next: { sha: string; prefix: string }[] = [];
+		for (const { dir, tree } of await fetchTreesInBatches(token, repo, scanned)) {
+			for (const entry of tree.tree) {
+				if (entry.type === 'blob' && isContextConfigFile(entry.path)) {
+					matches.push(dir.prefix);
+				} else if (entry.type === 'tree' && entry.sha && !SUBPATH_SCAN_IGNORED_DIRS.has(entry.path)) {
+					next.push({ sha: entry.sha, prefix: dir.prefix ? `${dir.prefix}/${entry.path}` : entry.path });
+				}
+			}
+		}
+		if (matches.length > 0) {
+			return shallowestSubPath(matches);
+		}
+		if (scanned.length < level.length) {
+			throw new IncompleteContextConfigScanError(repo);
+		}
+		level = next;
+	}
+	return '';
+}
+
+type TreeLookup = { dir: { sha: string; prefix: string }; tree: RawGitTree };
+
+/** Fetches each directory's tree with a fixed concurrency ceiling to keep the round-trips bounded. */
+async function fetchTreesInBatches(
+	token: string,
+	repo: string,
+	dirs: { sha: string; prefix: string }[],
+): Promise<TreeLookup[]> {
+	const results: TreeLookup[] = [];
+	for (let i = 0; i < dirs.length; i += SUBPATH_SCAN_CONCURRENCY) {
+		const batch = dirs.slice(i, i + SUBPATH_SCAN_CONCURRENCY);
+		const trees = await Promise.all(
+			batch.map(async (dir) => ({
+				dir,
+				tree: await githubFetchJson<RawGitTree>(
+					token,
+					`/repos/${repo}/git/trees/${encodeURIComponent(dir.sha)}`,
+				),
+			})),
+		);
+		results.push(...trees);
+	}
+	return results;
+}
+
 export async function createIssue(
 	token: string,
 	repo: string,
@@ -777,6 +875,11 @@ interface RawFileContent {
 	size: number;
 	content: string;
 	html_url: string;
+}
+
+interface RawGitTree {
+	tree: Array<{ path: string; type: 'blob' | 'tree' | 'commit'; sha?: string }>;
+	truncated: boolean;
 }
 
 function toIssueSummary(issue: RawIssue): GithubIssueSummary {

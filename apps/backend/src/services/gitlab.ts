@@ -2,8 +2,10 @@ import { execFileSync } from 'node:child_process';
 
 import { env } from '../env';
 import { GitIdentity, NAO_CO_AUTHOR, withCoAuthors } from '../utils/git-identity';
+import { configDir, getRepoSubPath, isContextConfigFile, shallowestSubPath } from './git-repo';
 
 export { NAO_CO_AUTHOR };
+export { getRepoSubPath };
 
 export interface GitLabProject {
 	id: number;
@@ -180,10 +182,10 @@ export async function listProjects(
 	return { projects, hasMore };
 }
 
-export function cloneRepo(token: string, fullName: string, targetDir: string): void {
+export function cloneRepo(token: string, fullName: string, targetDir: string, branch?: string): void {
 	const cloneUrl = authenticatedRepoUrl(token, fullName);
 	const cleanUrl = publicRepoUrl(fullName);
-	execFileSync('git', ['clone', '--depth', '1', cloneUrl, targetDir], {
+	execFileSync('git', ['clone', '--depth', '1', ...(branch ? ['--branch', branch] : []), cloneUrl, targetDir], {
 		timeout: 120_000,
 		stdio: 'pipe',
 	});
@@ -438,6 +440,42 @@ export async function getMergeRequest(token: string, repoFullName: string, iid: 
 		throw new Error(`GitLab API error: ${res.status}`);
 	}
 	return res.json() as Promise<GitLabMergeRequest>;
+}
+
+const TREE_PAGE_SIZE = 100;
+/** Safety ceiling to avoid an unbounded loop; large enough not to cap real repositories. */
+const TREE_MAX_PAGES = 10_000;
+
+export async function findContextConfigSubPath(token: string, repoFullName: string): Promise<string> {
+	try {
+		const encoded = encodeURIComponent(repoFullName);
+		const dirs: string[] = [];
+		for (let page = 1; page <= TREE_MAX_PAGES; page++) {
+			const res = await fetch(
+				`${gitlabApiUrl()}/projects/${encoded}/repository/tree?recursive=true&per_page=${TREE_PAGE_SIZE}&page=${page}`,
+				{ headers: { Authorization: `Bearer ${token}` } },
+			);
+			if (!res.ok) {
+				return '';
+			}
+			const entries = (await res.json()) as Array<{ type: string; path: string }>;
+			for (const entry of entries) {
+				if (entry.type === 'blob' && isContextConfigFile(entry.path)) {
+					const dir = configDir(entry.path);
+					if (dir === '') {
+						return '';
+					}
+					dirs.push(dir);
+				}
+			}
+			if (!res.headers.get('x-next-page')) {
+				return shallowestSubPath(dirs);
+			}
+		}
+		return '';
+	} catch {
+		return '';
+	}
 }
 
 export function parseMergeRequestUrl(url: string): { repo: string; iid: number } | null {

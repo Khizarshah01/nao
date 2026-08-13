@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
 	getRecommendationById: vi.fn(),
 	getUserGitIdentity: vi.fn(),
 	getUser: vi.fn(),
+	pushBranch: vi.fn(),
 	setRecommendationPr: vi.fn(),
 }));
 
@@ -55,11 +56,15 @@ vi.mock('../src/utils/logger', () => ({
 
 vi.mock('../src/services/github', () => ({
 	NAO_CO_AUTHOR: { email: 'bot@nao.dev', name: 'nao' },
+	checkoutNewBranch: vi.fn(),
 	cloneRepo: vi.fn(),
+	commitAll: vi.fn().mockReturnValue(true),
 	commitAllAndPushBranch: vi.fn(),
 	createPullRequest: vi.fn(),
 	getGitInfo: vi.fn().mockReturnValue({ branch: null, isGithub: false, repoFullName: null }),
+	getRepoSubPath: vi.fn().mockReturnValue(''),
 	getUserGitIdentity: vi.fn(),
+	pushBranch: vi.fn(),
 }));
 
 vi.mock('../src/services/gitlab', () => ({
@@ -70,6 +75,7 @@ vi.mock('../src/services/gitlab', () => ({
 	getGitInfo: mocks.getGitInfo,
 	getUserGitIdentity: mocks.getUserGitIdentity,
 	gitlabBaseUrl: () => 'https://gitlab.com',
+	pushBranch: vi.fn(),
 }));
 
 describe('createRecommendationPullRequest (GitLab)', () => {
@@ -155,7 +161,7 @@ describe('createRecommendationPullRequest (GitLab)', () => {
 			url: 'https://gitlab.com/nao/context/-/merge_requests/1',
 		});
 
-		expect(mocks.cloneRepo).toHaveBeenCalledWith('gitlab-token', 'nao/dbt-models', expect.any(String));
+		expect(mocks.cloneRepo).toHaveBeenCalledWith('gitlab-token', 'nao/dbt-models', expect.any(String), 'main');
 	});
 
 	it('rejects when GitLab token is not connected', async () => {
