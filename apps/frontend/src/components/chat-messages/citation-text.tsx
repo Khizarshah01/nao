@@ -1,29 +1,33 @@
 import { memo } from 'react';
 import { Streamdown } from 'streamdown';
 
-import { CITATION_TAG_REGEX } from '@nao/shared';
+import { stripAssistantTags } from '@nao/shared';
 
 import { CitationPopover } from '@/components/citation-popover';
 import { MarkdownTable } from '@/components/chat-messages/markdown-table';
 import { StreamingMarkdown } from '@/components/chat-messages/streaming-markdown';
+import { FileChip } from '@/components/file-chip';
+import { isStoredFilePath } from '@/lib/attachments';
 import { markdownPlugins } from '@/lib/markdown';
 
 const CLOBBER_PREFIX = 'user-content-';
 const SETTLED_COMPONENTS = {
 	table: MarkdownTableRenderer,
 	'citation-number': CitationNumberRenderer,
+	'saved-file': SavedFileRenderer,
 };
 const STREAMING_COMPONENTS = {
 	table: MarkdownTableRenderer,
 };
 const ALLOWED_TAGS = {
 	'citation-number': ['id', 'column'],
+	'saved-file': ['path'],
 };
-const LITERAL_TAG_CONTENT = ['citation-number'];
+const LITERAL_TAG_CONTENT = ['citation-number', 'saved-file'];
 
 export const AssistantTextWithCitation = memo(({ text, isStreaming }: { text: string; isStreaming: boolean }) => {
 	if (isStreaming) {
-		return <StreamingMarkdown components={STREAMING_COMPONENTS} text={text} transform={stripCitations} />;
+		return <StreamingMarkdown components={STREAMING_COMPONENTS} text={text} transform={stripAssistantTags} />;
 	}
 
 	return (
@@ -38,9 +42,18 @@ export const AssistantTextWithCitation = memo(({ text, isStreaming }: { text: st
 	);
 });
 
-function stripCitations(text: string): string {
-	return text.replace(CITATION_TAG_REGEX, '');
+/** A file the answer hands over. One nao cannot reach stays as the text the model wrote. */
+function SavedFileRenderer({ path, children }: any) {
+	const label = asText(children);
+	const filePath = asText(path);
+	if (!isStoredFilePath(filePath)) {
+		return <>{label || filePath}</>;
+	}
+
+	return <FileChip path={filePath} label={label || undefined} className='mx-0.5' />;
 }
+
+const asText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 function MarkdownTableRenderer({ node, className }: any) {
 	return <MarkdownTable node={node} className={className} />;

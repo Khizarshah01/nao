@@ -1,3 +1,5 @@
+export * from './assistant-tags';
+export * from './attachments';
 export * from './chart-block';
 export * from './chart-builder';
 export * from './chart-data-labels';

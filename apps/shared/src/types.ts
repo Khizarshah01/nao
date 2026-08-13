@@ -1,3 +1,5 @@
+import type { DocumentExtension } from './attachments';
+
 export type UserRole = 'admin' | 'user' | 'viewer' | 'context_admin';
 
 export const USER_ROLES = ['admin', 'user', 'viewer', 'context_admin'] as const satisfies readonly UserRole[];
@@ -228,14 +230,6 @@ export type ContextFileDiff = ContextChangedFile & {
 	newContent: string;
 };
 
-export const ALLOWED_IMAGE_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
-export type ImageMediaType = (typeof ALLOWED_IMAGE_MEDIA_TYPES)[number];
-
-export type ImageUploadData = {
-	mediaType: ImageMediaType;
-	data: string;
-};
-
 export const WARNING_BUDGET_THRESHOLD = 0.8;
 export const MAX_BUDGET_LIMIT_USD = 200_000;
 
@@ -289,10 +283,11 @@ export type ProjectChatListItem = {
 export type DownloadFormat = 'pdf' | 'html';
 export const DOWNLOAD_FORMATS = ['pdf', 'html'] as const satisfies readonly DownloadFormat[];
 
-export type ChatDownloadFormat = 'png' | 'csv' | 'xlsx';
-export const CHAT_DOWNLOAD_FORMATS = ['png', 'csv', 'xlsx'] as const satisfies readonly ChatDownloadFormat[];
+export type ChatDownloadFormat = 'png' | 'csv' | 'xlsx' | 'other';
+export const CHAT_DOWNLOAD_FORMATS = ['png', 'csv', 'xlsx', 'other'] as const satisfies readonly ChatDownloadFormat[];
 
-export type AnalyticsDownloadFormat = DownloadFormat | ChatDownloadFormat;
+/** A file taken out of permanent storage is recorded under its own extension. */
+export type AnalyticsDownloadFormat = DownloadFormat | ChatDownloadFormat | DocumentExtension;
 
 export const ANALYTICS_EVENT_TYPES = ['page_view', 'download', 'fork', 'favorite', 'refresh', 'view_duration'] as const;
 export const ANALYTICS_ASSET_TYPES = ['chat', 'story'] as const;
