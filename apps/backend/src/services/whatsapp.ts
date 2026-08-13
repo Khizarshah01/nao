@@ -24,6 +24,7 @@ import { logger } from '../utils/logger';
 import {
 	createWhatsappMapLink,
 	EXCLUDED_TOOLS,
+	formatClarificationText,
 	formatMessagingError,
 	renderMapImage,
 } from '../utils/messaging-provider';
@@ -494,6 +495,7 @@ class WhatsappService {
 		const chartUrls: string[] = [];
 		const mapLinks: string[] = [];
 		let lastMessage: UIMessage | null = null;
+		let clarificationText: string | null = null;
 
 		for await (const uiMessage of readUIMessageStream<UIMessage>({ stream })) {
 			lastMessage = uiMessage;
@@ -518,12 +520,21 @@ class WhatsappService {
 				} else if (result?.link) {
 					mapLinks.push(result.link);
 				}
+			} else if (part.type === 'tool-clarification' && part.state !== 'input-streaming' && part.input) {
+				clarificationText = formatClarificationText(part.input.question, part.input.options).replace(
+					CITATION_TAG_REGEX,
+					'',
+				);
 			}
 		}
 
-		const finalText = (lastMessage?.parts ?? [])
+		const textContent = (lastMessage?.parts ?? [])
 			.filter((p): p is Extract<UIMessagePart, { type: 'text' }> => p.type === 'text')
 			.map((p) => stripAssistantTags(p.text))
+			.join('\n\n');
+
+		const finalText = [textContent, clarificationText]
+			.filter((part): part is string => Boolean(part && part.trim()))
 			.join('\n\n');
 
 		return { finalText, chartUrls, mapLinks };

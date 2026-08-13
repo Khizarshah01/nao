@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
 	Code,
@@ -74,6 +74,14 @@ export const DisplayMapToolCall = ({
 	const slotRef = useRef<HTMLDivElement>(null);
 	const breakoutStyle = useBreakoutStyle(slotRef, isExpanded && viewMode === 'map');
 	const mapViewRef = useRef<MapViewHandle>(null);
+	const [hasShownMap, setHasShownMap] = useState(false);
+
+	useEffect(() => {
+		if (viewMode === 'map') {
+			setHasShownMap(true);
+			mapViewRef.current?.resize();
+		}
+	}, [viewMode]);
 	const isEditable = Boolean(agent && !agent.isReadonly && !agent.isRunning);
 	const storyIds = useStoryIds();
 	const { mutate: logDownload } = useMutation(trpc.analyticsEvent.logChatDownload.mutationOptions());
@@ -89,6 +97,12 @@ export const DisplayMapToolCall = ({
 					}),
 				});
 				queryClient.invalidateQueries({ queryKey: trpc.story.listAll.queryKey() });
+				queryClient.invalidateQueries({
+					queryKey: trpc.story.getLatest.queryKey({
+						chatId: variables.chatId,
+						storySlug: variables.storySlug,
+					}),
+				});
 			},
 		}),
 	);
@@ -351,8 +365,8 @@ export const DisplayMapToolCall = ({
 						/>
 					)}
 
-					{viewMode === 'map' && (
-						<div className='px-3 pb-3'>
+					<div className={cn('px-3 pb-3', viewMode !== 'map' && 'hidden')}>
+						{(viewMode === 'map' || hasShownMap) && (
 							<Suspense fallback={<Skeleton className='w-full aspect-3/2 rounded-lg' />}>
 								<MapView
 									ref={mapViewRef}
@@ -361,8 +375,8 @@ export const DisplayMapToolCall = ({
 									config={mapConfig}
 								/>
 							</Suspense>
-						</div>
-					)}
+						)}
+					</div>
 
 					{viewMode === 'table' && (
 						<TableDisplay
