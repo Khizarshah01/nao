@@ -6,6 +6,7 @@ import {
 	ArrowDownWideNarrow,
 	ArrowUp01,
 	ArrowUpWideNarrow,
+	AlertTriangle,
 	Check,
 	ClockArrowDown,
 	ClockArrowUp,
@@ -17,6 +18,7 @@ import {
 	X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { selectBackgroundModel } from '@nao/shared';
 import {
 	CONTEXT_RECOMMENDATION_CATEGORIES,
 	CONTEXT_RECOMMENDATION_CATEGORY_LABELS,
@@ -27,7 +29,6 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { TrpcRouter } from '@nao/backend/trpc';
-import type { LlmProvider } from '@nao/shared/types';
 import type { inferRouterOutputs } from '@trpc/server';
 
 import type { TabBarItem } from '@/components/ui/tab-bar';
@@ -1200,20 +1201,27 @@ function ConfigTab({ enabled }: { enabled: boolean }) {
 
 	const availableModels = useQuery({ ...trpc.contextRecommendation.listAvailableModels.queryOptions(), enabled });
 	const config = useQuery({ ...trpc.contextRecommendation.getConfig.queryOptions(), enabled });
+	const defaultModels = useQuery({ ...trpc.project.getDefaultModels.queryOptions(), enabled });
 	const setConfig = useMutation(trpc.contextRecommendation.setConfig.mutationOptions());
 
 	const invalidateConfig = () => {
 		queryClient.invalidateQueries({ queryKey: trpc.contextRecommendation.getConfig.queryKey() });
+		queryClient.invalidateQueries({ queryKey: trpc.project.getDefaultModels.queryOptions().queryKey });
 	};
 
-	const selectedModelValue =
-		config.data?.modelProvider && config.data?.modelId
-			? `${config.data.modelProvider}:${config.data.modelId}`
-			: undefined;
+	const selectedModel = selectBackgroundModel(defaultModels.data?.settings, 'context_recommendation');
+	const selectedModelValue = selectedModel ? modelValue(selectedModel) : undefined;
+	const selectedAvailableModel = selectedModel
+		? availableModels.data?.find((model) => modelValue(model) === selectedModelValue)
+		: undefined;
+	const selectedModelUnavailable = !!selectedModel && !selectedAvailableModel;
 
 	const handleModelChange = async (value: string) => {
-		const [provider, ...rest] = value.split(':');
-		await setConfig.mutateAsync({ modelProvider: provider as LlmProvider, modelId: rest.join(':') });
+		const model = availableModels.data?.find((candidate) => modelValue(candidate) === value);
+		if (!model) {
+			return;
+		}
+		await setConfig.mutateAsync({ modelProvider: model.provider, modelId: model.modelId });
 		invalidateConfig();
 	};
 
@@ -1290,14 +1298,47 @@ function ConfigTab({ enabled }: { enabled: boolean }) {
 								disabled={setConfig.isPending}
 							>
 								<SelectTrigger className='w-full'>
-									<SelectValue placeholder='Project default' />
+									<SelectValue placeholder='Project default'>
+										{selectedModel && (
+											<div className='flex items-center gap-2'>
+												<LlmProviderIcon
+													provider={selectedModel.provider}
+													baseUrl={selectedAvailableModel?.baseUrl ?? null}
+													className='size-4'
+												/>
+												<span
+													className={cn(
+														selectedModelUnavailable &&
+															'text-amber-600 dark:text-amber-500',
+													)}
+												>
+													{selectedAvailableModel?.name ?? selectedModel.modelId}
+												</span>
+												{selectedModelUnavailable && (
+													<AlertTriangle
+														className='size-3.5 text-amber-500'
+														aria-label='Selected model is unavailable; nao will use an available fallback'
+													/>
+												)}
+											</div>
+										)}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
+									{selectedModelUnavailable && selectedModelValue && (
+										<SelectItem value={selectedModelValue} disabled>
+											<div className='flex items-center gap-2 text-amber-600 dark:text-amber-500'>
+												<LlmProviderIcon
+													provider={selectedModel.provider}
+													baseUrl={null}
+													className='size-4'
+												/>
+												{selectedModel.modelId} (unavailable)
+											</div>
+										</SelectItem>
+									)}
 									{availableModels.data?.map((m) => (
-										<SelectItem
-											key={`${m.provider}:${m.modelId}`}
-											value={`${m.provider}:${m.modelId}`}
-										>
+										<SelectItem key={modelValue(m)} value={modelValue(m)}>
 											<div className='flex items-center gap-2'>
 												<LlmProviderIcon
 													provider={m.provider}
@@ -1429,4 +1470,8 @@ function ConfigTab({ enabled }: { enabled: boolean }) {
 			<RecommendationRepoCard />
 		</div>
 	);
+}
+
+function modelValue(model: { provider: string; modelId: string }): string {
+	return JSON.stringify([model.provider, model.modelId]);
 }
