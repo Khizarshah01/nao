@@ -521,9 +521,8 @@ class WhatsappService {
 					mapLinks.push(result.link);
 				}
 			} else if (part.type === 'tool-clarification' && part.state !== 'input-streaming' && part.input) {
-				clarificationText = formatClarificationText(part.input.question, part.input.options).replace(
-					CITATION_TAG_REGEX,
-					'',
+				clarificationText = stripAssistantTags(
+					formatClarificationText(part.input.question, part.input.options),
 				);
 			}
 		}
