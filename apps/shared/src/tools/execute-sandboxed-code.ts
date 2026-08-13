@@ -27,6 +27,7 @@ export const SANDBOX_OUTPUT_DIR = 'out';
 export const saveFileSchema = z.object({
 	filename: z
 		.string()
+		.min(1)
 		.refine((value) => value !== '.' && value !== '..' && !/[\\/\0]/.test(value), {
 			message: 'filename must be a single file name without path segments',
 		})

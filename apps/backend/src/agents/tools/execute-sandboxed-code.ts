@@ -237,7 +237,13 @@ async function saveSandboxFilesToStorage(
 	const saved: string[] = [];
 
 	for (const { filename, home_path } of files) {
-		if (filename === '.' || filename === '..' || filename !== path.basename(filename) || /[\\\0]/.test(filename)) {
+		if (
+			!filename ||
+			filename === '.' ||
+			filename === '..' ||
+			filename !== path.basename(filename) ||
+			/[\\\0]/.test(filename)
+		) {
 			throw new Error(`save_files filename must be a single file name, not a path: '${filename}'`);
 		}
 		if (!isStoragePath(home_path)) {

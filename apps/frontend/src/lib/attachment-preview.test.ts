@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import writeXlsxFile from 'write-excel-file/universal';
 
 import { loadAttachmentPreview, MAX_TABULAR_PREVIEW_SIZE_MB } from './attachment-preview';
 
@@ -20,5 +21,26 @@ describe('loadAttachmentPreview', () => {
 
 		await expect(loadAttachmentPreview('/home/large.csv')).resolves.toEqual({ kind: 'too-large' });
 		expect(fetchAttachment).not.toHaveBeenCalled();
+	});
+
+	it('previews a workbook as a table', async () => {
+		const blob = await writeXlsxFile([
+			[{ type: String, value: 'name' }],
+			[{ type: String, value: 'Alpha' }],
+		]).toBlob();
+		vi.mocked(fetchAttachmentSize).mockResolvedValue(blob.size);
+		vi.mocked(fetchAttachment).mockResolvedValue(blob);
+
+		await expect(loadAttachmentPreview('/home/book.xlsx')).resolves.toEqual({
+			kind: 'table',
+			sheets: [
+				{
+					name: 'Sheet1',
+					truncated: false,
+					columns: ['name'],
+					rows: [{ name: 'Alpha' }],
+				},
+			],
+		});
 	});
 });

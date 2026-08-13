@@ -28,13 +28,14 @@ export async function executeQuery(
 		);
 	}
 
+	if (save_to && context.adminMode) {
+		throw new Error('save_to is unavailable in admin mode. Run the query without save_to.');
+	}
+
 	if (save_to && database_id !== LOCAL_DATABASE_ID) {
 		throw new Error(
 			`save_to only works with the "${LOCAL_DATABASE_ID}" database. To keep a warehouse result, re-run it against ${LOCAL_DATABASE_ID} as "SELECT * FROM <query_id>".`,
 		);
-	}
-	if (save_to && context.adminMode) {
-		throw new Error('save_to is unavailable in admin mode. Run the query without save_to.');
 	}
 
 	if (context.adminMode) {

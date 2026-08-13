@@ -3,6 +3,7 @@ import { fileExtension } from '@nao/shared/attachments';
 import { fetchAttachment, fetchAttachmentSize } from '@/lib/attachments';
 import { parseDelimitedText } from '@/lib/delimited-text';
 import { toSheetTable } from '@/lib/sheet-table';
+import { capWorkbookForPreview } from '@/lib/workbook-preview';
 
 /** Rows beyond this are dropped: paging through a million of them is slower than the preview is useful. */
 export const MAX_PREVIEW_ROWS = 5000;
@@ -84,7 +85,7 @@ const readDelimitedSheet = (path: string, text: string): AttachmentSheet => {
 /** The workbook parser is loaded on demand, since most chats never open a spreadsheet. */
 const readWorkbookSheets = async (blob: Blob): Promise<AttachmentSheet[]> => {
 	const { default: readXlsxFile } = await import('read-excel-file/browser');
-	const sheets = await readXlsxFile(blob);
+	const sheets = await readXlsxFile(await capWorkbookForPreview(blob, MAX_PREVIEW_ROWS + 1));
 	return sheets.map(({ sheet, data }) => toSheet(sheet, data));
 };
 

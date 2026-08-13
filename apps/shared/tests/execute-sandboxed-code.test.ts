@@ -8,7 +8,7 @@ describe('saveFileSchema', () => {
 			true,
 		);
 
-		for (const filename of ['../report.xlsx', 'nested/report.xlsx', 'nested\\report.xlsx', '.', '..']) {
+		for (const filename of ['', '../report.xlsx', 'nested/report.xlsx', 'nested\\report.xlsx', '.', '..']) {
 			expect(saveFileSchema.safeParse({ filename, home_path: '/home/report.xlsx' }).success).toBe(false);
 		}
 	});
