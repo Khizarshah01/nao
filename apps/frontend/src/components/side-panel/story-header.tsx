@@ -26,6 +26,7 @@ import type { StoryRefreshFailure } from '@/components/story-page-header';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useToggleFavorite } from '@/hooks/use-toggle-favorite';
 import { StoryDownload } from '@/components/story-download';
+import { EditableStoryTitle } from '@/components/editable-story-title';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/main';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -76,6 +77,19 @@ export interface StoryHeaderProps {
 	lastRefreshFailure?: StoryRefreshFailure | null;
 }
 
+function mergeStorySummaries(
+	messageStories: StorySummary[],
+	persistedStories: { storySlug: string; title: string }[],
+): StorySummary[] {
+	const storiesBySlug = new Map(messageStories.map((story) => [story.id, story]));
+
+	for (const story of persistedStories) {
+		storiesBySlug.set(story.storySlug, { id: story.storySlug, title: story.title });
+	}
+
+	return Array.from(storiesBySlug.values());
+}
+
 export const StoryHeader = memo(function StoryHeader({
 	title,
 	chatId,
@@ -116,32 +130,52 @@ export const StoryHeader = memo(function StoryHeader({
 	const { toggle: toggleFavorite, isPending: isFavoritePending } = useToggleFavorite('story');
 	const { data: favorites } = useQuery({ ...trpc.favorite.list.queryOptions(), enabled: !!storyId });
 	const isFavorited = !!storyId && (favorites?.storyIds.includes(storyId) ?? false);
-	const otherStories = useMemo(() => allStories.filter((s) => s.id !== storySlug), [allStories, storySlug]);
+	const { data: persistedStories = [] } = useQuery({
+		...trpc.story.listStories.queryOptions({ chatId }),
+		enabled: !isReadonlyMode,
+	});
+	const stories = useMemo(() => mergeStorySummaries(allStories, persistedStories), [allStories, persistedStories]);
+	const otherStories = useMemo(() => stories.filter((story) => story.id !== storySlug), [stories, storySlug]);
 	const hasMultiple = otherStories.length > 0;
 	const isEditingCode = viewMode === 'code' && isCodeDirty && !isReadonlyMode;
 	const showSubHeader = viewMode === 'edit' || isEditingCode || !isViewingLatest;
 
 	const titleElement = hasMultiple ? (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<button
-					type='button'
-					className='flex items-center gap-1 min-w-0 flex-1 cursor-pointer hover:text-foreground/80 transition-colors focus:outline-none'
-				>
-					<h3 className='text-sm font-medium truncate'>{title}</h3>
-					<ChevronDown className='size-3 shrink-0 text-muted-foreground' strokeWidth={2.25} />
-				</button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align='start'>
-				{otherStories.map((story) => (
-					<DropdownMenuItem key={story.id} onClick={() => onSwitchStory(story.id)}>
-						<span className='truncate'>{story.title}</span>
-					</DropdownMenuItem>
-				))}
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<div className='flex min-w-0 flex-1 items-center gap-1'>
+			<EditableStoryTitle
+				storyId={storyId}
+				title={title}
+				canEdit={!isReadonlyMode}
+				heading='h3'
+				className='min-w-0 truncate text-sm font-medium'
+				inputClassName='text-sm font-medium'
+			/>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button type='button' variant='ghost-muted' size='icon-sm' aria-label='Switch story'>
+						<ChevronDown className='size-3.5' strokeWidth={2.25} />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align='start'>
+					{otherStories.map((story) => (
+						<DropdownMenuItem key={story.id} onClick={() => onSwitchStory(story.id)}>
+							<span className='truncate'>{story.title}</span>
+						</DropdownMenuItem>
+					))}
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</div>
 	) : (
-		<h3 className='text-sm font-medium truncate flex-1'>{title}</h3>
+		<div className='min-w-0 flex-1'>
+			<EditableStoryTitle
+				storyId={storyId}
+				title={title}
+				canEdit={!isReadonlyMode}
+				heading='h3'
+				className='truncate text-sm font-medium'
+				inputClassName='text-sm font-medium'
+			/>
+		</div>
 	);
 
 	const versionNav = totalVersions > 1 && (
