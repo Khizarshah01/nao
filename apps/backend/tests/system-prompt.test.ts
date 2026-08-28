@@ -164,6 +164,52 @@ describe('SystemPrompt saved files rules', () => {
 	});
 });
 
+describe('SystemPrompt configured database ids', () => {
+	it('renders every configured database when several are configured', () => {
+		const markdown = renderToMarkdown(
+			SystemPrompt({
+				configuredDatabases: [
+					{
+						id: 'duckdb-jaffle-shop',
+						type: 'duckdb',
+						database: 'jaffle_shop',
+					},
+					{
+						id: 'bigquery-prod',
+						type: 'bigquery',
+						project_id: 'nao-corp',
+						dataset_id: 'nao-corp.movies_silver',
+					},
+				],
+			}),
+		);
+
+		expect(markdown).toContain(
+			[
+				'## Databases',
+				'',
+				"execute_sql's **database_id** must be one of:",
+				'',
+				'- **duckdb-jaffle-shop** — type=duckdb, database=jaffle_shop',
+				'- **bigquery-prod** — type=bigquery, project_id=nao-corp, dataset_id=nao-corp.movies_silver',
+			].join('\n'),
+		);
+	});
+
+	it('renders no configured database block for zero or one database', () => {
+		const withoutDatabases = renderToMarkdown(SystemPrompt({ configuredDatabases: [] }));
+		const withOneDatabase = renderToMarkdown(
+			SystemPrompt({
+				configuredDatabases: [{ id: 'duckdb-jaffle-shop', type: 'duckdb', database: 'jaffle_shop' }],
+			}),
+		);
+
+		expect(withoutDatabases).not.toContain('## Databases');
+		expect(withOneDatabase).not.toContain('## Databases');
+		expect(withOneDatabase).not.toContain('duckdb-jaffle-shop');
+	});
+});
+
 describe('SystemPrompt local database rules', () => {
 	it('names the reserved database id and what it is for', () => {
 		const markdown = renderToMarkdown(SystemPrompt({}));
