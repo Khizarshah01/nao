@@ -72,7 +72,7 @@ export const listGroupedChats = async (
 	filters: ChatFilterType[],
 ): Promise<GroupedChatListResponse> => {
 	const effective = filters.length === 0 || filters.includes('all') ? (['all'] as ChatFilterType[]) : filters;
-	const needsShared = effective.includes('all') || effective.includes('shared_with_me') || groupBy === 'ownership';
+	const needsShared = effective.includes('shared_with_me') || groupBy === 'ownership';
 
 	const [ownItems, sharedItems] = await Promise.all([
 		listOwnChats(userId),
