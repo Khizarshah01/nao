@@ -64,6 +64,7 @@ export interface StoryHeaderProps {
 	onEnlarge: () => void;
 	isShared: boolean;
 	isAgentRunning: boolean;
+	isStoryUpdating: boolean;
 	isSaving?: boolean;
 	isReadonlyMode: boolean;
 	isLive: boolean;
@@ -114,6 +115,7 @@ export const StoryHeader = memo(function StoryHeader({
 	onEnlarge,
 	isShared,
 	isAgentRunning,
+	isStoryUpdating,
 	isSaving = false,
 	isReadonlyMode,
 	isLive,
@@ -175,6 +177,13 @@ export const StoryHeader = memo(function StoryHeader({
 				className='truncate text-sm font-medium'
 				inputClassName='text-sm font-medium'
 			/>
+		</div>
+	);
+
+	const updatingIndicator = isStoryUpdating && (
+		<div className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground' role='status'>
+			<Loader2 className='size-3 animate-spin' strokeWidth={2.25} />
+			<span>Updating…</span>
 		</div>
 	);
 
@@ -362,6 +371,7 @@ export const StoryHeader = memo(function StoryHeader({
 					</div>
 					<div className='flex items-center gap-2 border-b px-4 py-2'>
 						{titleElement}
+						{updatingIndicator}
 						{versionNav}
 					</div>
 				</>
@@ -377,6 +387,7 @@ export const StoryHeader = memo(function StoryHeader({
 						<X className='size-3.5' strokeWidth={2.25} />
 					</Button>
 					{titleElement}
+					{updatingIndicator}
 					{versionNav}
 					{viewModeToggle}
 					{liveControls}
@@ -430,7 +441,13 @@ export const StoryHeader = memo(function StoryHeader({
 							<span className='text-xs text-muted-foreground'>
 								Viewing v{currentVersion} of {totalVersions}
 							</span>
-							<Button variant='outline' size='sm' onClick={onRestore} className='gap-1.5'>
+							<Button
+								variant='outline'
+								size='sm'
+								onClick={onRestore}
+								disabled={isSaving}
+								className='gap-1.5'
+							>
 								<RotateCcw className='size-3' strokeWidth={2.25} />
 								<span>Restore</span>
 							</Button>
