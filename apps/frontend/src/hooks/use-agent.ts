@@ -60,6 +60,8 @@ export interface AgentHelpers {
 	setMentions: (mentions: MentionOption[]) => void;
 	adminMode: boolean;
 	setAdminMode: (enabled: boolean) => void;
+	compactMode: boolean;
+	setCompactMode: (enabled: boolean) => void;
 	isReadonly?: boolean;
 }
 
@@ -83,6 +85,7 @@ const agentAdminModeStore = new WeakMap<Agent<UIMessage>, boolean>();
 
 interface AgentSendRefs {
 	adminModeRef: { current: boolean };
+	compactModeRef: { current: boolean };
 	selectedModelRef: { current: LlmSelectedModel | null };
 	mentionsRef: { current: MentionOption[] };
 }
@@ -104,6 +107,8 @@ export const useAgent = ({ disableNavigation = false }: { disableNavigation?: bo
 	const mentionsRef = useRef<MentionOption[]>([]);
 	const [adminMode, setAdminModeState] = useState(false);
 	const adminModeRef = useRef(false);
+	const [compactMode, setCompactModeState] = useState(false);
+	const compactModeRef = useRef(false);
 	/** Set to the server id of a chat that was just created, so the upcoming chatId change is treated as the same conversation continuing rather than opening a different chat. */
 	const continuationChatIdRef = useRef<string | undefined>(undefined);
 
@@ -114,6 +119,11 @@ export const useAgent = ({ disableNavigation = false }: { disableNavigation?: bo
 	const setAdminMode = useCallback((enabled: boolean) => {
 		adminModeRef.current = enabled;
 		setAdminModeState(enabled);
+	}, []);
+
+	const setCompactMode = useCallback((enabled: boolean) => {
+		compactModeRef.current = enabled;
+		setCompactModeState(enabled);
 	}, []);
 
 	const agentInstance = useMemo(() => {
@@ -183,6 +193,7 @@ export const useAgent = ({ disableNavigation = false }: { disableNavigation?: bo
 					const activeMentionsRef = liveRefs?.mentionsRef ?? mentionsRef;
 					const activeSelectedModelRef = liveRefs?.selectedModelRef ?? selectedModelRef;
 					const activeAdminModeRef = liveRefs?.adminModeRef ?? adminModeRef;
+					const activeCompactModeRef = liveRefs?.compactModeRef ?? compactModeRef;
 
 					const mentions = activeMentionsRef.current;
 					activeMentionsRef.current = [];
@@ -190,6 +201,7 @@ export const useAgent = ({ disableNavigation = false }: { disableNavigation?: bo
 					const images = extractImagesFromMessage(messageToSend);
 					const documents = extractDocumentPathsFromMessage(messageToSend);
 					const adminModeAtSend = activeAdminModeRef.current;
+					const compactModeAtSend = activeCompactModeRef.current;
 					agentAdminModeStore.set(newAgent, adminModeAtSend);
 					return {
 						headers: getActiveProjectId() ? { 'x-nao-project-id': getActiveProjectId()! } : undefined,
@@ -206,6 +218,7 @@ export const useAgent = ({ disableNavigation = false }: { disableNavigation?: bo
 							mentions: mentions.length > 0 ? mentions : undefined,
 							timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 							adminMode: adminModeAtSend || undefined,
+							compactMode: compactModeAtSend || undefined,
 						},
 					};
 				},
@@ -241,7 +254,7 @@ export const useAgent = ({ disableNavigation = false }: { disableNavigation?: bo
 		return agentService.registerAgent(agentId, newAgent);
 	}, [chatId, disableNavigation, navigate, setChat, queryClient]);
 
-	agentSendRefsStore.set(agentInstance, { adminModeRef, selectedModelRef, mentionsRef });
+	agentSendRefsStore.set(agentInstance, { adminModeRef, compactModeRef, selectedModelRef, mentionsRef });
 
 	const { status, error, clearError, sendMessage, setMessages, messages } = useChat({
 		chat: agentInstance,
@@ -514,6 +527,8 @@ export const useAgent = ({ disableNavigation = false }: { disableNavigation?: bo
 		setMentions,
 		adminMode,
 		setAdminMode,
+		compactMode,
+		setCompactMode,
 	});
 };
 

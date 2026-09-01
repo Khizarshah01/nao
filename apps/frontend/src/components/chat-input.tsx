@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useId } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, PencilRuler, Database, Paperclip, AlertTriangle, Shield, Check } from 'lucide-react';
+import { Plus, PencilRuler, Database, Paperclip, AlertTriangle, Shield, Check, Briefcase } from 'lucide-react';
 import { ATTACHMENT_ACCEPT } from '@nao/shared/attachments';
 import { Button, ChatButton, MicButton } from './ui/button';
 import { SlidingWaveform } from './chat-input-sliding-waveform';
@@ -107,6 +107,8 @@ function ChatInputBase({
 		isLoadingMessages,
 		adminMode,
 		setAdminMode,
+		compactMode,
+		setCompactMode,
 		setMentions,
 		submitQueuedMessageNow,
 		error,
@@ -421,6 +423,8 @@ function ChatInputBase({
 								isAdminMode={isAdminMode}
 								adminModeLocked={adminModeLocked}
 								onSelectAdminMode={handleSelectAdminMode}
+								isCompactMode={compactMode}
+								onSelectCompactMode={() => setCompactMode(!compactMode)}
 								onAddAttachment={attachmentUpload.openFilePicker}
 								onAddStory={() => {
 									promptRef.current?.appendMention(
@@ -630,6 +634,8 @@ function ChatInputPlusMenu({
 	isAdminMode,
 	adminModeLocked,
 	onSelectAdminMode,
+	isCompactMode,
+	onSelectCompactMode,
 	onAddAttachment,
 	onAddStory,
 	onOpenSkills,
@@ -642,6 +648,8 @@ function ChatInputPlusMenu({
 	isAdminMode: boolean;
 	adminModeLocked: boolean;
 	onSelectAdminMode: () => void;
+	isCompactMode: boolean;
+	onSelectCompactMode: () => void;
 	onAddAttachment: () => void;
 	onAddStory: () => void;
 	onOpenSkills: () => void;
@@ -700,6 +708,11 @@ function ChatInputPlusMenu({
 							<Shield className='size-4' />
 							<span>Admin mode</span>
 							{isAdminMode && <Check className='size-4 ml-auto' />}
+						</DropdownMenuItem>
+						<DropdownMenuItem onSelect={onSelectCompactMode}>
+							<Briefcase className='size-4' />
+							<span>Compact mode</span>
+							{isCompactMode && <Check className='size-4 ml-auto' />}
 						</DropdownMenuItem>
 					</>
 				)}

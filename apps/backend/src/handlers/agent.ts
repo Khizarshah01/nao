@@ -28,7 +28,7 @@ interface HandleAgentMessageResult {
 }
 
 export const handleAgentRoute = async (opts: HandleAgentMessageInput): Promise<HandleAgentMessageResult> => {
-	const { userId, message, messageToEditId, model, mentions, projectId, adminMode } = opts;
+	const { userId, message, messageToEditId, model, mentions, projectId, adminMode, compactMode } = opts;
 
 	if (!projectId) {
 		throw new HandlerError('BAD_REQUEST', noProjectMessage());
@@ -67,17 +67,17 @@ export const handleAgentRoute = async (opts: HandleAgentMessageInput): Promise<H
 	await mcpService.initializeMcpState(projectId);
 	await skillService.initializeSkills(projectId);
 
-	const agent = await agentService.create(
-		{ ...chat, userId, projectId },
-		model,
-		adminMode
-			? {
-					tools: adminAgentTools,
-					systemPrompt: renderAdminSystemPrompt({ timezone: opts.timezone }),
-					adminMode: true,
-				}
-			: undefined,
-	);
+	const agentOptions: Parameters<typeof agentService.create>[2] = {};
+	if (adminMode) {
+		agentOptions.tools = adminAgentTools;
+		agentOptions.systemPrompt = renderAdminSystemPrompt({ timezone: opts.timezone });
+		agentOptions.adminMode = true;
+	}
+	if (compactMode) {
+		agentOptions.compactMode = true;
+	}
+
+	const agent = await agentService.create({ ...chat, userId, projectId }, model, agentOptions);
 
 	const isForkedFirstMessage =
 		!isNewChat && !!chat.forkMetadata && chat.messages.filter((m) => m.role === 'user' && !m.isForked).length === 1;

@@ -63,6 +63,8 @@ export const AgentProvider = ({ children, disableNavigation }: Props) => {
 			setMentions: agent.setMentions,
 			adminMode: agent.adminMode,
 			setAdminMode: agent.setAdminMode,
+			compactMode: agent.compactMode,
+			setCompactMode: agent.setCompactMode,
 		}),
 		[
 			agent.chatId,
@@ -83,6 +85,8 @@ export const AgentProvider = ({ children, disableNavigation }: Props) => {
 			agent.setMentions,
 			agent.adminMode,
 			agent.setAdminMode,
+			agent.compactMode,
+			agent.setCompactMode,
 		],
 	);
 
@@ -138,6 +142,8 @@ export const ReadonlyAgentMessagesProvider = ({
 			setMentions: noop,
 			adminMode: false,
 			setAdminMode: noop,
+			compactMode: false,
+			setCompactMode: noop,
 			isReadonly: true,
 		}),
 		[chatId],

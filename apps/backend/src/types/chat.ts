@@ -200,4 +200,6 @@ export const AgentRequestSchema = z.object({
 	timezone: z.string().optional(),
 	/** When true, the message runs in admin mode: it queries nao's own usage database instead of the warehouse. */
 	adminMode: z.boolean().optional(),
+	/** When true, the agent uses a business-friendly, non-technical tone and tool calls are collapsed in the UI. */
+	compactMode: z.boolean().optional(),
 });

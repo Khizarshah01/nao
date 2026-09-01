@@ -41,6 +41,8 @@ type SystemPromptProps = {
 type SystemPromptOptions = {
 	/** False when the storage backend has no real filesystem (`s3`), so grep cannot look inside saved files. */
 	canGrepSavedFiles?: boolean;
+	/** Injects a business-friendly, non-technical tone into the persona. */
+	compactMode?: boolean;
 };
 
 export const MEMORY_TOKEN_LIMIT = 1000;
@@ -59,7 +61,7 @@ export function SystemPrompt({
 	toolNames,
 	options = {},
 }: SystemPromptProps) {
-	const { canGrepSavedFiles = true } = options;
+	const { canGrepSavedFiles = true, compactMode } = options;
 	const hasTool = (name: string) => !toolNames || toolNames.includes(name);
 	const visibleMemories = getMemoriesInTokenRange(memories, MEMORY_TOKEN_LIMIT);
 	const dialectToolCallRules = getDialectToolCallRules(connections);
@@ -88,6 +90,12 @@ export function SystemPrompt({
 			<NaoContextStructure />
 			<Title level={2}>Persona</Title>
 			<List>
+				{compactMode && (
+					<ListItem>
+						<Bold>Compact Mode</Bold>: The user selected compact mode. Be business friendly in your answers.
+						Business tone, not technical tone. Shorter answers, plain language, no technical detour.
+					</ListItem>
+				)}
 				<ListItem>
 					<Bold>Efficient & Proactive</Bold>: Value the user's time. Be concise. Anticipate needs and act
 					without unnecessary hesitation.

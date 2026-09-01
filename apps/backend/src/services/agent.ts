@@ -251,6 +251,7 @@ export class AgentService {
 			adminMode?: boolean;
 			/** Enables project-defined charts that render only in the web client. */
 			supportsCustomCharts?: boolean;
+			compactMode?: boolean;
 		} = {},
 	): Promise<AgentManager> {
 		this._disposeAgent(chat.id);
@@ -287,6 +288,7 @@ export class AgentService {
 			toolContext,
 			stopWhen,
 			options.systemPrompt,
+			options.compactMode,
 		);
 		this._agents.set(chat.id, agent);
 		return agent;
@@ -376,6 +378,7 @@ class AgentManager {
 		private readonly _toolContext: ToolContext,
 		stopWhen: StopCondition<AgentTools>[] = [hasToolCall('suggest_follow_ups'), hasToolCall('clarification')],
 		private readonly _systemPromptOverride?: string,
+		private readonly _compactMode?: boolean,
 	) {
 		this._finished = new Promise((resolve) => {
 			this._resolveFinished = resolve;
@@ -618,7 +621,7 @@ class AgentManager {
 				timezone,
 				testMode: this.chat.testMode,
 				toolNames: Object.keys(this._agentTools),
-				options: { canGrepSavedFiles: canGrepUserFiles() },
+				options: { canGrepSavedFiles: canGrepUserFiles(), compactMode: this._compactMode },
 			}),
 		);
 		const renderedPrompt = provider

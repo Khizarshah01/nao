@@ -5,6 +5,7 @@ import type { GroupablePart } from '@/types/ai';
 import { Expandable } from '@/components/ui/expandable';
 import { AssistantReasoning } from '@/components/chat-messages/assistant-reasoning';
 import { useChatView } from '@/contexts/chat-view';
+import { useOptionalAgentContext } from '@/contexts/agent.provider';
 import { ToolGroupProvider } from '@/contexts/tool-group';
 import { isReasoningPart } from '@/lib/ai';
 import { groupMcpToolCalls } from '@/lib/mcp';
@@ -19,13 +20,21 @@ export const ToolCallsGroup = memo(({ parts, isSettled }: Props) => {
 	const isLoading = !isSettled;
 	const hasError = parts.some((p) => !isReasoningPart(p) && p.state === 'output-error');
 	const { expandOnError } = useChatView();
-	const [isExpanded, setIsExpanded] = useState(isLoading || (expandOnError && hasError));
+	const agent = useOptionalAgentContext();
+	const compactMode = agent?.compactMode ?? false;
+	const [isExpanded, setIsExpanded] = useState(!compactMode && (isLoading || (expandOnError && hasError)));
 
 	useEffect(() => {
+		if (compactMode) {
+			if (isSettled) {
+				setIsExpanded(false);
+			}
+			return;
+		}
 		if (isLoading || (expandOnError && hasError)) {
 			setIsExpanded(true);
 		}
-	}, [isLoading, expandOnError, hasError]);
+	}, [isLoading, expandOnError, hasError, compactMode, isSettled]);
 
 	const title = useToolGroupSummaryTitle({ parts, isLoading });
 	const groupedParts = useMemo(() => groupMcpToolCalls(parts), [parts]);
