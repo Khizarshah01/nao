@@ -526,7 +526,10 @@ export const ChartDisplay = memo(function ChartDisplay({
 					const category = String(item[xAxisKey]);
 					acc[toKey(category)] = {
 						label: labelize(category, dateFormat),
-						color: Colors[index % Colors.length],
+						color:
+							(Array.isArray(series[0]?.category_colors)
+								? series[0].category_colors.find((c) => c.category === category)?.color
+								: undefined) || Colors[index % Colors.length],
 					};
 					return acc;
 				},
@@ -567,7 +570,10 @@ export const ChartDisplay = memo(function ChartDisplay({
 				return {
 					value: category,
 					dataKey: toKey(category),
-					color: Colors[index % Colors.length],
+					color:
+						(Array.isArray(series[0]?.category_colors)
+							? series[0].category_colors.find((c) => c.category === category)?.color
+							: undefined) || Colors[index % Colors.length],
 					isHidden: false,
 				};
 			});

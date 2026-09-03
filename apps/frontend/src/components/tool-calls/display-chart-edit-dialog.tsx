@@ -1,4 +1,4 @@
-import { computeKpiComparison, DEFAULT_COLORS } from '@nao/shared';
+import { bucketPieData, computeKpiComparison, DEFAULT_COLORS } from '@nao/shared';
 import { displayChart } from '@nao/shared/tools';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChartArea, ChartBar, ChartColumn, ChartColumnIncreasing, ChartLine, Plus, Trash2, X } from 'lucide-react';
@@ -157,6 +157,16 @@ export function ChartConfigEditDialog({
 	const isCombo = displayChart.chartTypeSupportsComboSeries(draft.chart_type);
 	const hasRightAxis = isCombo && displayChart.hasRightAxisSeries(draft.series);
 	const hasLeftAxis = !isCombo || draft.series.some((s) => s.y_axis !== 'right');
+
+	const isPie = displayChart.isPieChart(draft.chart_type);
+	const pieCategories = useMemo(() => {
+		const xAxisKey = draft.x_axis_key;
+		if (!isPie || !data || data.length === 0 || !xAxisKey) {
+			return [];
+		}
+		const bucketed = bucketPieData(data, xAxisKey, draft.series[0]?.data_key || '');
+		return [...new Set(bucketed.map((row) => String(row[xAxisKey])))];
+	}, [isPie, data, draft.x_axis_key, draft.series]);
 
 	useEffect(() => {
 		if (open) {
@@ -483,16 +493,18 @@ export function ChartConfigEditDialog({
 											open={isOpen}
 											onClick={() => toggleValueFormat(index)}
 										/>
-										<input
-											type='color'
-											aria-label='Series color'
-											value={normalizeHexColor(
-												series.color,
-												paletteHexes[index % paletteHexes.length],
-											)}
-											onChange={(e) => updateSeriesAt(index, { color: e.target.value })}
-											className='h-8 w-8 cursor-pointer overflow-hidden rounded-lg border-none bg-transparent p-0 [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-none'
-										/>
+										{!isPie && (
+											<input
+												type='color'
+												aria-label='Series color'
+												value={normalizeHexColor(
+													series.color,
+													paletteHexes[index % paletteHexes.length],
+												)}
+												onChange={(e) => updateSeriesAt(index, { color: e.target.value })}
+												className='h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-lg border-none bg-transparent p-0 [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-none'
+											/>
+										)}
 										<Button
 											type='button'
 											size='icon-sm'
@@ -526,6 +538,59 @@ export function ChartConfigEditDialog({
 														})
 													}
 												/>
+											)}
+											{isPie && pieCategories.length > 0 && (
+												<div className='mt-1 flex flex-col gap-2 rounded-md border border-border p-3'>
+													<div className='text-xs font-medium text-muted-foreground'>
+														Slice Colors
+													</div>
+													{pieCategories.map((category, catIndex) => (
+														<div
+															key={category}
+															className='flex items-center justify-between gap-2'
+														>
+															<span className='truncate text-sm'>{category}</span>
+															<input
+																type='color'
+																aria-label={`Color for ${category}`}
+																value={normalizeHexColor(
+																	Array.isArray(series.category_colors)
+																		? series.category_colors.find(
+																				(c) => c.category === category,
+																			)?.color
+																		: undefined,
+																	paletteHexes[catIndex % paletteHexes.length],
+																)}
+																onChange={(e) => {
+																	const current = Array.isArray(
+																		series.category_colors,
+																	)
+																		? series.category_colors
+																		: [];
+																	const existingIndex = current.findIndex(
+																		(c) => c.category === category,
+																	);
+																	const newColors = [...current];
+																	if (existingIndex >= 0) {
+																		newColors[existingIndex] = {
+																			category,
+																			color: e.target.value,
+																		};
+																	} else {
+																		newColors.push({
+																			category,
+																			color: e.target.value,
+																		});
+																	}
+																	updateSeriesAt(index, {
+																		category_colors: newColors,
+																	});
+																}}
+																className='h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-lg border-none bg-transparent p-0 [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border-none'
+															/>
+														</div>
+													))}
+												</div>
 											)}
 										</div>
 									);
