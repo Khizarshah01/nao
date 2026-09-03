@@ -22,6 +22,9 @@ import { useSession } from '@/lib/auth-client';
 import { trpc } from '@/main';
 
 export const Route = createFileRoute('/_sidebar-layout/settings/project/team')({
+	staticData: {
+		title: 'Team',
+	},
 	component: ProjectTeamTabPage,
 });
 
@@ -104,9 +107,9 @@ function ProjectTeamTabPage() {
 	return (
 		<>
 			<SettingsCard
-				title='Team Members'
-				description='Manage the members of your project.'
-				divide
+				title='Members'
+				description='These are people who belong to this project.'
+				flush
 				action={
 					isAdmin ? (
 						<Button variant='secondary' size='sm' onClick={() => setIsAddOpen(true)}>
@@ -117,7 +120,7 @@ function ProjectTeamTabPage() {
 				}
 			>
 				{usersWithRoles.isLoading ? (
-					<div className='text-sm text-muted-foreground'>Loading users...</div>
+					<div className='p-4 text-sm text-muted-foreground'>Loading users...</div>
 				) : (
 					<TeamMembersList
 						members={members}
