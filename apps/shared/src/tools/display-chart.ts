@@ -85,6 +85,15 @@ export const SeriesConfigSchema = z.object({
 	y_axis: YAxisSideEnum.describe(
 		'Which Y-axis this series is plotted against ("left" or "right"). Only used when chart_type is "mixed"; defaults to "left". A right axis is drawn whenever any series uses "right" — use it to compare metrics with very different scales/units.',
 	).optional(),
+	category_colors: z
+		.array(
+			z.object({
+				category: z.string().describe('The value of the category (e.g., Apple).'),
+				color: z.string().describe('The CSS color for this category slice.'),
+			}),
+		)
+		.describe('Optional list of category values to CSS colors, used to personalize donut/pie chart slices.')
+		.optional(),
 });
 
 export const ColorScaleRuleSchema = z.object({

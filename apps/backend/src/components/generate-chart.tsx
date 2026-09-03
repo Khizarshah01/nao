@@ -60,15 +60,22 @@ export function renderChartToSvg(input: RenderChartInput): string {
 	const xAxisKey = resolveDataKey(data, config.x_axis_key ?? undefined);
 	const series = config.series.map((s) => ({ ...s, data_key: resolveDataKey(data, s.data_key) }));
 
+	const isPie = chartType === 'pie' || chartType === 'donut';
+
 	const colorFor = (key: string, index: number) => {
+		if (isPie) {
+			return (
+				(Array.isArray(series[0]?.category_colors)
+					? series[0].category_colors.find((c) => c.category === key)?.color
+					: undefined) || defaultColorFor(key, index)
+			);
+		}
 		const matched = series.find((s) => s.data_key === key);
 		return matched?.color || defaultColorFor(key, index);
 	};
 
 	const labelFormatter = (value: string) => labelize(value, dateFormat);
 	const maxLabelWidth = estimateMaxLabelWidth(data, xAxisKey, dateFormat);
-
-	const isPie = chartType === 'pie' || chartType === 'donut';
 
 	const chartData = isPie ? bucketPieData(data, xAxisKey, series[0]?.data_key ?? '') : data;
 
