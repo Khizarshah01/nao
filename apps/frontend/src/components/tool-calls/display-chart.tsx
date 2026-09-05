@@ -686,7 +686,7 @@ export const ChartDisplay = memo(function ChartDisplay({
 							payload={legendPayload}
 							layout={isPie && !compactPieLegend ? 'vertical' : 'horizontal'}
 							align={isPie && !compactPieLegend ? 'right' : 'center'}
-							verticalAlign={isPie && !compactPieLegend ? 'middle' : 'bottom'}
+							verticalAlign={isPie && !compactPieLegend ? 'top' : 'bottom'}
 							content={
 								<ChartLegendContent
 									layout={isPie && !compactPieLegend ? 'vertical' : 'horizontal'}
