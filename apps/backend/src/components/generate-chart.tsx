@@ -82,7 +82,7 @@ export function renderChartToSvg(input: RenderChartInput): string {
 	let legend: LegendEntry[] = [];
 	if (includeLegend) {
 		legend = isPie
-			? buildPieLegendEntries(chartData, xAxisKey, dateFormat)
+			? buildPieLegendEntries(chartData, xAxisKey, colorFor, dateFormat)
 			: series.map((s, i) => ({
 					label: s.label || labelize(s.data_key, dateFormat),
 					color: colorFor(s.data_key, i),
@@ -126,11 +126,12 @@ export function renderChartToSvg(input: RenderChartInput): string {
 function buildPieLegendEntries(
 	bucketedRows: Record<string, unknown>[],
 	categoryKey: string,
+	colorFor: (key: string, index: number) => string,
 	dateFormat?: DateFormatSettings | null,
 ): LegendEntry[] {
 	return bucketedRows.map((row, i) => {
 		const category = String(row[categoryKey]);
-		return { label: labelize(category, dateFormat), color: defaultColorFor(category, i) };
+		return { label: labelize(category, dateFormat), color: colorFor(category, i) };
 	});
 }
 
