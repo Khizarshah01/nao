@@ -295,8 +295,8 @@ if (result.data.NAO_DEFAULT_PROJECT_PATH && result.data.NAO_MODE === 'cloud') {
 	process.exit(1);
 }
 
-if (result.data.NAO_CONTEXT_SOURCE && result.data.NAO_MODE === 'cloud') {
-	console.error('NAO_CONTEXT_SOURCE cannot be set when NAO_MODE=cloud.');
+if (result.data.NAO_CONTEXT_SOURCE === 'git' && result.data.NAO_MODE === 'cloud') {
+	console.error('NAO_CONTEXT_SOURCE=git cannot be set when NAO_MODE=cloud.');
 	process.exit(1);
 }
 
