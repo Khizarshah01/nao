@@ -1,5 +1,5 @@
-import { count, sql } from 'drizzle-orm';
-import type { AnySQLiteTable } from 'drizzle-orm/sqlite-core';
+import { count, eq, type SQL, sql } from 'drizzle-orm';
+import type { AnySQLiteColumn, AnySQLiteTable } from 'drizzle-orm/sqlite-core';
 
 import { getConnections } from '../agents/user-rules';
 import { env } from '../env';
@@ -60,7 +60,8 @@ interface StartupAdditionalInfo {
 
 interface TokenCounts {
 	input: number;
-	cache: number;
+	cacheRead: number;
+	cacheWrite: number;
 	output: number;
 }
 
@@ -121,7 +122,10 @@ function getStoryCount(): Promise<number | null> {
 }
 
 function getMessageCount(): Promise<number | null> {
-	return countRows((s) => s.chatMessage);
+	return countRows(
+		(s) => s.chatMessage,
+		(s) => eq(s.chatMessage.role, 'user'),
+	);
 }
 
 async function getTokenCounts(): Promise<TokenCounts | null> {
@@ -130,25 +134,32 @@ async function getTokenCounts(): Promise<TokenCounts | null> {
 		const m = s.chatMessage;
 		const [row] = await db
 			.select({
-				input: sql<number>`coalesce(sum(${m.inputNoCacheTokens}), 0)`.mapWith(Number),
-				cache: sql<number>`coalesce(sum(${m.inputCacheReadTokens}), 0) + coalesce(sum(${m.inputCacheWriteTokens}), 0)`.mapWith(
-					Number,
-				),
-				output: sql<number>`coalesce(sum(${m.outputTotalTokens}), 0)`.mapWith(Number),
+				input: sumColumn(m.inputNoCacheTokens),
+				cacheRead: sumColumn(m.inputCacheReadTokens),
+				cacheWrite: sumColumn(m.inputCacheWriteTokens),
+				output: sumColumn(m.outputTotalTokens),
 			})
 			.from(m);
-		return row ?? { input: 0, cache: 0, output: 0 };
+		return row ?? { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
 	} catch {
 		return null;
 	}
 }
 
+function sumColumn(column: AnySQLiteColumn): SQL<number> {
+	return sql<number>`coalesce(sum(${column}), 0)`.mapWith(Number);
+}
+
 type Schema = typeof import('../db/abstractSchema').default;
 
-async function countRows(selectTable: (s: Schema) => AnySQLiteTable): Promise<number | null> {
+async function countRows(
+	selectTable: (s: Schema) => AnySQLiteTable,
+	buildWhere?: (s: Schema) => SQL,
+): Promise<number | null> {
 	try {
 		const [{ db }, { default: s }] = await Promise.all([import('../db/db'), import('../db/abstractSchema')]);
-		const rows = await db.select({ count: count() }).from(selectTable(s));
+		const query = db.select({ count: count() }).from(selectTable(s));
+		const rows = buildWhere ? await query.where(buildWhere(s)) : await query;
 		return rows[0]?.count ?? 0;
 	} catch {
 		return null;
