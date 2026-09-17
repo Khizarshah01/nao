@@ -30,6 +30,12 @@ export type ConfiguredDatabase = {
 	type?: string;
 } & Partial<Record<DatabaseIdentifyingField, string>>;
 
+export type ConfiguredSemanticLayer = {
+	type: string;
+	manifestPath: string;
+	database: string | null;
+};
+
 export function extractRequiredEnvVars(projectFolder: string): string[] {
 	const configPath = path.join(projectFolder, 'nao_config.yaml');
 	const mcpConfigPath = path.join(projectFolder, 'agent', 'mcps', 'mcp.json');
@@ -226,6 +232,30 @@ export function extractConfiguredDatabases(projectFolder: string): ConfiguredDat
 
 		return [configuredDatabase];
 	});
+}
+
+/** The `semantic_layer` section of nao_config.yaml, or null when the project declares none. */
+export function extractConfiguredSemanticLayer(projectFolder: string): ConfiguredSemanticLayer | null {
+	const configPath = path.join(projectFolder, 'nao_config.yaml');
+	if (!fs.existsSync(configPath)) {
+		return null;
+	}
+
+	const config = loadConfig(configPath);
+	if (!isRecord(config) || !isRecord(config.semantic_layer)) {
+		return null;
+	}
+
+	const semanticLayer = config.semantic_layer;
+	const manifestPath = normalizeString(semanticLayer.manifest_path);
+	if (!manifestPath) {
+		return null;
+	}
+	return {
+		type: normalizeString(semanticLayer.type) ?? 'metricflow',
+		manifestPath,
+		database: normalizeString(semanticLayer.database),
+	};
 }
 
 function deriveDatabaseNameFromPath(databasePath: string): string {
