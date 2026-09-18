@@ -290,6 +290,12 @@ const baseEnvSchema = z.object({
 		.optional()
 		.default('true')
 		.transform((val) => val === 'true'),
+
+	BETA_SUBAGENTS_ENABLED: z
+		.enum(['true', 'false'])
+		.optional()
+		.default('false')
+		.transform((val) => val === 'true'),
 });
 
 const envSchema = baseEnvSchema

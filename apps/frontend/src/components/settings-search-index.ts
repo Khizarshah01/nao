@@ -12,6 +12,7 @@ export interface SettingsSearchEntry {
 	adminOrContextAdmin?: boolean;
 	cloudHidden?: boolean;
 	cloudOnly?: boolean;
+	betaSubagentsOnly?: boolean;
 }
 
 export const settingsSearchIndex: SettingsSearchEntry[] = [
@@ -315,6 +316,17 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
 			'per category',
 		],
 		adminOnly: true,
+	},
+	{
+		page: '/settings/project/agent',
+		pageLabel: 'Agent',
+		section: 'Models',
+		search: { tab: 'models' },
+		title: 'Subagent model',
+		description: 'Choose which model subagents such as the context search run on.',
+		keywords: ['subagent', 'sub-agent', 'search agent', 'context search', 'delegate', 'cheaper model', 'cost'],
+		adminOnly: true,
+		betaSubagentsOnly: true,
 	},
 	{
 		page: '/settings/project/agent',
