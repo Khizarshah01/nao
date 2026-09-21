@@ -11,7 +11,21 @@ from typing import Annotated, Any
 import numpy as np
 import pandas as pd
 import uvicorn
-from api_models import (
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+__all__ = ["BlockedRowAccessTable", "EnforcedRowSecurity", "PredicateRowAccessTable"]
+
+load_dotenv()
+
+fastapi_path = Path(__file__).resolve().parent
+cli_path = fastapi_path.parent.parent.parent / "cli"
+sys.path.insert(0, str(fastapi_path))
+sys.path.insert(0, str(cli_path))
+
+from api_models import (  # noqa: E402
     BlockedRowAccessTable,
     EnforcedRowSecurity,
     ExecuteSQLRequest,
@@ -24,18 +38,6 @@ from api_models import (
     ValidateRowPredicateResponse,
     ValidateSQLResponse,
 )
-from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-__all__ = ["BlockedRowAccessTable", "EnforcedRowSecurity", "PredicateRowAccessTable"]
-
-load_dotenv()
-
-cli_path = Path(__file__).resolve().parent.parent.parent.parent / "cli"
-sys.path.insert(0, str(cli_path))
-
 from nao_core.commands.sync.cleanup import get_database_folder_names  # noqa: E402
 from nao_core.config import NaoConfig, NaoConfigError  # noqa: E402
 from nao_core.config.databases.allow_listed_only_guard import (  # noqa: E402
