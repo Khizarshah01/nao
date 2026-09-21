@@ -10,6 +10,8 @@ import * as storyQueries from '../queries/story.queries';
 import * as storyFolderQueries from '../queries/story-folder.queries';
 import { logActivity } from '../services/activity';
 import { executeLiveQuery, getStoryQueryData, refreshStoryData } from '../services/live-story';
+import { notifySharedItem } from '../services/notification.service';
+import { teardownStoryDelivery } from '../services/story-delivery.service';
 import {
 	assertStoryFiltersEnabled,
 	getFilteredStoryQueryData,
@@ -18,7 +20,7 @@ import {
 } from '../services/story-filters';
 import { hasUserGroupFeature } from '../services/user-group-feature-access.service';
 import { logAnalyticsEvent } from '../utils/analytics-event';
-import { notifySharedItemRecipients } from '../utils/email';
+import { withKeyedLock } from '../utils/keyed-lock';
 import { buildDownloadResponse } from '../utils/story-download';
 import { extractStorySummary } from '../utils/story-summary';
 import {
@@ -83,14 +85,19 @@ export const sharedStoryRoutes = {
 				throw new TRPCError({ code: 'NOT_FOUND', message: 'Story not found in this project.' });
 			}
 
-			const storyOwnerId = await storyQueries.getStoryOwnerId(story.id);
+			const storyOwnerId = (await storyQueries.getStoryOwnerId(story.id)) ?? ctx.user.id;
 			if (storyOwnerId !== ctx.user.id && ctx.userRole !== 'admin') {
 				throw new TRPCError({ code: 'FORBIDDEN', message: 'Only the creator or an admin can share this.' });
 			}
 
 			if (input.visibility === 'project') {
 				await storyFolderQueries.moveStoryToFolder(story.id, null, {
-					storyOwnerId: ctx.user.id,
+					storyOwnerId,
+					projectId: ctx.project.id,
+				});
+			} else {
+				await storyFolderQueries.ensureStoryPrivate(story.id, {
+					storyOwnerId,
 					projectId: ctx.project.id,
 				});
 			}
@@ -114,18 +121,17 @@ export const sharedStoryRoutes = {
 				sharedStoryId: created.id,
 			});
 
-			if (input.notify) {
-				notifySharedItemRecipients({
-					projectId: ctx.project.id,
-					sharerId: ctx.user.id,
-					sharerName: ctx.user.name,
-					shareId: created.id,
-					itemLabel: 'story',
-					itemTitle: story.title,
-					visibility: input.visibility,
-					allowedUserIds: input.allowedUserIds,
-				}).catch((err) => console.error('Failed to notify shared story recipients', err));
-			}
+			notifySharedItem({
+				projectId: ctx.project.id,
+				sharerId: ctx.user.id,
+				sharerName: ctx.user.name,
+				shareId: created.id,
+				itemLabel: 'story',
+				itemTitle: story.title,
+				visibility: input.visibility,
+				allowedUserIds: input.allowedUserIds,
+				deliverExternally: input.notify,
+			}).catch((err) => console.error('Failed to notify shared story recipients', err));
 
 			return created;
 		}),
@@ -268,21 +274,23 @@ export const sharedStoryRoutes = {
 			trigger: 'manual',
 		});
 		try {
-			const { queryData } = await refreshStoryData(shared.chatId, shared.slug);
-			await activityQueries.completeActivity(activity.id, {
-				queriesRefreshed: Object.keys(queryData).length,
+			return await withKeyedLock(`story:${story.id}`, async () => {
+				const { queryData } = await refreshStoryData(shared.chatId!, shared.slug);
+				await activityQueries.completeActivity(activity.id, {
+					queriesRefreshed: Object.keys(queryData).length,
+				});
+				logAnalyticsEvent({
+					projectId: shared.projectId,
+					type: 'refresh',
+					assetType: 'story',
+					actorUserId: ctx.user.id,
+					storyId: story.id,
+					chatId: shared.chatId,
+					sharedStoryId: shared.id,
+					metadata: { type: 'refresh', trigger: 'manual', queriesRefreshed: Object.keys(queryData).length },
+				});
+				return { queryData, cachedAt: new Date() };
 			});
-			logAnalyticsEvent({
-				projectId: shared.projectId,
-				type: 'refresh',
-				assetType: 'story',
-				actorUserId: ctx.user.id,
-				storyId: story.id,
-				chatId: shared.chatId,
-				sharedStoryId: shared.id,
-				metadata: { type: 'refresh', trigger: 'manual', queriesRefreshed: Object.keys(queryData).length },
-			});
-			return { queryData, cachedAt: new Date() };
 		} catch (err) {
 			await activityQueries.failActivity(activity.id, err instanceof Error ? err.message : String(err));
 			throw err;
@@ -324,7 +332,7 @@ export const sharedStoryRoutes = {
 
 			const newlyAddedUserIds = input.allowedUserIds.filter((id) => !previousAllowedUserIds.includes(id));
 			if (newlyAddedUserIds.length > 0) {
-				await notifySharedItemRecipients({
+				await notifySharedItem({
 					projectId: shared.projectId,
 					sharerId: shared.userId,
 					sharerName: shared.authorName,
@@ -358,6 +366,12 @@ export const sharedStoryRoutes = {
 			throw new TRPCError({ code: 'FORBIDDEN', message: 'Only the creator or an admin can delete this.' });
 		}
 		await sharedStoryQueries.deleteSharedStory(input.shareId);
+		const storyOwnerId = (await storyQueries.getStoryOwnerId(ctx.resource.storyId)) ?? ctx.resource.userId;
+		await storyFolderQueries.ensureStoryPrivate(ctx.resource.storyId, {
+			storyOwnerId,
+			projectId: ctx.resource.projectId,
+		});
+		await teardownStoryDelivery(ctx.resource.storyId);
 	}),
 
 	download: shareAccessProcedure
