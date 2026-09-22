@@ -1500,6 +1500,29 @@ function toNumericValue(value: unknown): number {
 	return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
+/** Sorts rows chronologically (ascending) by a date key so charts render left-to-right. */
+export function sortByDateKey<T extends Record<string, unknown>>(rows: T[], xAxisKey: string): T[] {
+	return [...rows].sort((a, b) => {
+		const timeA = toDateTime(a[xAxisKey]);
+		const timeB = toDateTime(b[xAxisKey]);
+		if (timeA == null || timeB == null) {
+			if (timeA == null && timeB == null) {
+				return 0;
+			}
+			return timeA != null ? -1 : 1;
+		}
+		return timeA - timeB;
+	});
+}
+
+function toDateTime(value: unknown): number | null {
+	if (value == null) {
+		return null;
+	}
+	const time = new Date(value as string | number | Date).getTime();
+	return Number.isNaN(time) ? null : time;
+}
+
 function renderChartTitle(title: string) {
 	return (
 		<Customized
