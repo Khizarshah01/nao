@@ -470,6 +470,13 @@
       "when": 1790001489883,
       "tag": "0066_notification_system",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1790175948081,
+      "tag": "0067_llm_inference_created_at_index",
+      "breakpoints": true
     }
   ]
 }
